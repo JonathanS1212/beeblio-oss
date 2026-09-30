@@ -8,7 +8,7 @@ import { renderMarkdownBibliography, stripYamlFrontMatter } from "@/lib/markdown
 import { renderMarkdownWithZoteroCitations } from "@/lib/document-export/zotero-fields";
 import { renderMarkdownWithMendeleyCitations } from "@/lib/document-export/mendeley-fields";
 import { PROJECT_BIBLIOGRAPHY_PATH } from "@/lib/project-bibliography";
-import { readAgentWorkspaceFile } from "@/lib/workspace-gcs";
+import { readAgentWorkspaceFile } from "@/lib/workspace-files";
 import {
   preprocessMarkdown,
   workspaceImagePath,
@@ -16,9 +16,7 @@ import {
   type ExportDiagram,
   type ImageLoader,
 } from "@/lib/document-export/markdown-preprocess";
-import { renderPrintHtml } from "@/lib/document-export/render-html";
 import { separateProseLines } from "@/lib/document-export/paragraph-lines";
-import { convertHtmlToPdf, PdfServiceError } from "@/lib/document-export/convert-pdf";
 import { convertMarkdownToDocx } from "@/lib/document-export/convert-docx";
 import { convertMarkdownToLatexBundle } from "@/lib/document-export/convert-latex";
 import { convertMarkdownToPortableBundle } from "@/lib/document-export/convert-markdown";
@@ -42,7 +40,7 @@ const diagramSchema = z.object({
 });
 
 const convertRequestSchema = z.object({
-  format: z.enum(["pdf", "docx", "latex", "markdown"]),
+  format: z.enum(["docx", "latex", "markdown"]),
   filename: z.string().min(1).max(255),
   filePath: z.string().min(1).max(1024),
   markdown: z.string().max(MAX_MARKDOWN_LENGTH),
@@ -53,7 +51,6 @@ const convertRequestSchema = z.object({
 });
 
 const MIME_TYPES = {
-  pdf: "application/pdf",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   latex: "application/zip",
 } as const;
@@ -63,7 +60,7 @@ function downloadStem(filename: string): string {
   return stem.replace(/["\\\r\n]/g, "_");
 }
 
-function downloadFilename(filename: string, format: "pdf" | "docx" | "latex" | "markdown"): string {
+function downloadFilename(filename: string, format: "docx" | "latex" | "markdown"): string {
   const safeStem = downloadStem(filename);
   if (format === "latex") return `${safeStem}-latex.zip`;
   return `${safeStem}.${format}`;
@@ -306,25 +303,8 @@ export async function POST(
       ? renderMarkdownWithZoteroCitations(stripped, { entries })
       : renderMarkdownBibliography(stripped, {
         references,
-        citationAppearance: format === "pdf" ? "html" : "docx",
+        citationAppearance: "docx",
       });
-
-    if (format === "pdf") {
-      const preprocessed = await preprocessMarkdown(source, {
-        diagrams: diagrams as Array<ExportDiagram | null>,
-        diagramTarget: "html",
-        loadImage: imageLoader,
-      });
-      const html = await renderPrintHtml(preprocessed, outputName);
-      const pdf = await convertHtmlToPdf(html);
-      return new NextResponse(pdf, {
-        headers: {
-          "Content-Type": MIME_TYPES.pdf,
-          "Content-Disposition": `attachment; filename="${outputName}"`,
-          "Cache-Control": "no-store",
-        },
-      });
-    }
 
     // Client rasterization can fail (browser canvas quirks); fill any gaps
     // from the server before pandoc sees the markdown.
@@ -342,9 +322,6 @@ export async function POST(
       },
     });
   } catch (error) {
-    if (error instanceof PdfServiceError) {
-      return NextResponse.json({ error: error.message }, { status: 502 });
-    }
     const message = error instanceof Error ? error.message : "Conversion failed";
     console.error("[convert] document conversion failed", error);
     return NextResponse.json({ error: message }, { status: 500 });

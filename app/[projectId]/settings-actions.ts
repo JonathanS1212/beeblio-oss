@@ -20,7 +20,7 @@ import {
   type ProjectSettings,
 } from "@/lib/project-settings";
 import { CITATION_STYLES } from "@/lib/citations";
-import { listAgentWorkspaceFilesRecursive } from "@/lib/workspace-gcs";
+import { listAgentWorkspaceFilesRecursive } from "@/lib/workspace-files";
 import { getOwnedProject } from "./actions";
 
 const defaultOpenFileSchema = z

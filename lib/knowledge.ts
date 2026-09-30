@@ -4,21 +4,13 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { knowledgeDocuments, knowledgeStores, projects } from "@/db/schema";
-import {
-  calculateChargedCredits,
-  externalToolCostDetails,
-  getCreditsConfig,
-  getSpendableCredits,
-  knowledgeIndexingCostUsdMicros,
-  recordDirectUsage,
-} from "@/lib/credits";
 import { acceptsKnowledgeFile, knowledgeMimeType, KNOWLEDGE_MAX_FILE_BYTES } from "@/lib/knowledge-files";
 import {
   bibliographyKeysByFilePathFromSource,
   normalizeKnowledgeWorkspacePath,
 } from "@/lib/knowledge-citations";
 import { PROJECT_BIBLIOGRAPHY_PATH } from "@/lib/project-bibliography";
-import { readWorkspaceFile, statWorkspaceFile, WorkspaceFileError } from "@/lib/workspace-gcs";
+import { readWorkspaceFile, statWorkspaceFile, WorkspaceFileError } from "@/lib/workspace-files";
 
 const EMBEDDING_MODEL = "models/gemini-embedding-2";
 const POLL_MS = 2_000;
@@ -174,17 +166,6 @@ export async function queueKnowledgeFile(userId: string, projectSlug: string, fi
   )) {
     return { kind: "already_exists" as const, document: toDTO(existing) };
   }
-  // Google embeds the whole document once at its $0.15/M-token indexing rate;
-  // reject files the user cannot afford before any provider work starts.
-  const mimeType = knowledgeMimeType(filePath);
-  const estimatedCostUsdMicros = knowledgeIndexingCostUsdMicros(metadata.size, mimeType);
-  if (estimatedCostUsdMicros > 0 && getCreditsConfig().enabled) {
-    const estimatedCredits = calculateChargedCredits(estimatedCostUsdMicros);
-    const spendable = await getSpendableCredits(userId);
-    if (spendable < estimatedCredits) {
-      throw new Error(`Indexing ${displayName} in Knowledge needs about ${estimatedCredits} credits, but only ${spendable} are available. Add credits or remove some Knowledge files instead.`);
-    }
-  }
   const store = await ensureStore(project.id);
   const [record] = existing
     ? await db.update(knowledgeDocuments).set({ status: "indexing", lastError: null, updatedAt: new Date() }).where(eq(knowledgeDocuments.id, existing.id)).returning()
@@ -243,39 +224,9 @@ export async function processKnowledgeDocument(userId: string, projectSlug: stri
       lastError: null,
       updatedAt: new Date(),
     }).where(eq(knowledgeDocuments.id, record.id));
-    await meterKnowledgeIndexing(userId, record.id, source.etag, source.content.byteLength, mimeType);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Knowledge indexing failed";
     await db.update(knowledgeDocuments).set({ status: "failed", lastError: message, updatedAt: new Date() }).where(eq(knowledgeDocuments.id, record.id));
-  }
-}
-
-/**
- * Charge the one-time Gemini indexing cost after a successful upload. The
- * document id + source etag key makes retries of the same content free while
- * re-indexing changed content bills again, matching Google's behavior.
- */
-async function meterKnowledgeIndexing(userId: string, documentId: string, sourceEtag: string, sizeBytes: number, mimeType: string) {
-  try {
-    const charge = externalToolCostDetails({
-      executionClass: getCreditsConfig().defaultExecutionClass,
-      category: "knowledge",
-      toolName: "knowledge_indexing",
-      costUsdMicros: knowledgeIndexingCostUsdMicros(sizeBytes, mimeType),
-    });
-    if (!charge) return;
-    await recordDirectUsage({
-      userId,
-      idempotencyKey: `knowledge-indexing:${documentId}:${sourceEtag}`,
-      credits: charge.chargedCredits,
-      reason: "knowledge:indexing",
-      source: "app",
-      details: charge.details,
-    });
-  } catch (error) {
-    // The indexing itself succeeded; keep it usable and let reconciliation
-    // surface the billing write failure separately.
-    console.error("[knowledge] indexing credit bookkeeping failed", error);
   }
 }
 

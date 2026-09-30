@@ -44,7 +44,7 @@ const outputSchema = z
   .strict();
 
 export default defineTool({
-  description: `Find project files by glob pattern directly in durable GCS storage without starting the sandbox.
+  description: `Find project files by glob pattern directly in the linked project folder without running a shell command.
 
 Usage:
 - Paths are scoped to the current project under /workspace.

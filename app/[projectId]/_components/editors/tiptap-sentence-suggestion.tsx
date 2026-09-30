@@ -363,8 +363,7 @@ export function SentenceSuggestions({
         return;
       }
       if (success.modelSource === "system") {
-        window.dispatchEvent(new Event("beeblio:credits-changed"));
-      }
+        }
       cacheRef.current.set(key, success);
       while (cacheRef.current.size > CACHE_MAX_ENTRIES) {
         cacheRef.current.delete(cacheRef.current.keys().next().value as string);

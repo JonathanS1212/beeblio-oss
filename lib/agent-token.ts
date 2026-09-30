@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { integerEnv } from "@/lib/env-config";
+import { localAgentSecret } from "@/lib/local-secret";
 
 /**
  * Short-lived HS256 JWT minted by the Next.js /eve proxy after it verifies the
@@ -19,8 +20,7 @@ function b64url(value: string): string {
 }
 
 export function mintAgentToken(userId: string): string {
-  const secret = process.env.EVE_AUTH_SECRET;
-  if (!secret) throw new Error("EVE_AUTH_SECRET is not set");
+  const secret = localAgentSecret();
 
   const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const now = Math.floor(Date.now() / 1000);

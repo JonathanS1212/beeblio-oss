@@ -25,4 +25,3 @@ minimumReleaseAgeExclude:
   - nitro
   - rolldown
   - workflow
-  - '@blaxel/core@0.3.20'

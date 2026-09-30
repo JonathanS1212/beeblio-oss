@@ -19,6 +19,13 @@ export function CreateProjectForm({ customTrigger }: { customTrigger?: React.Rea
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [folderPath, setFolderPath] = useState("");
+  async function chooseFolder() {
+    const response = await fetch("/api/projects/select-folder", { method: "POST" });
+    const result = await response.json();
+    if (response.ok && typeof result.folderPath === "string") setFolderPath(result.folderPath);
+    else if (result.error && response.status !== 400) alert(result.error);
+  }
   
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -27,11 +34,12 @@ export function CreateProjectForm({ customTrigger }: { customTrigger?: React.Rea
       const formData = new FormData(e.currentTarget);
       const name = formData.get("name") as string;
       const description = formData.get("description") as string;
+      const folderPath = formData.get("folderPath") as string;
       
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, description, folderPath }),
       });
       
       const result = await res.json();
@@ -63,7 +71,7 @@ export function CreateProjectForm({ customTrigger }: { customTrigger?: React.Rea
       </DialogTrigger>
       <DialogContent className="sm:max-w-[460px]">
         <DialogHeader>
-          <DialogTitle className="text-xl">Create Project</DialogTitle>
+          <DialogTitle className="text-xl">Link Project Folder</DialogTitle>
           {/* <DialogDescription>
             Set up a focused space for sources, analysis, and ongoing questions.
           </DialogDescription> */}
@@ -74,6 +82,14 @@ export function CreateProjectForm({ customTrigger }: { customTrigger?: React.Rea
               Project Name
             </label>
             <Input id="name" name="name" placeholder="e.g. Urban heat and public health" required disabled={loading} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="folderPath" className="text-sm font-medium">Project folder</label>
+            <div className="flex gap-2">
+              <Input id="folderPath" name="folderPath" value={folderPath} onChange={(event) => setFolderPath(event.target.value)} placeholder="/absolute/path/to/folder" required disabled={loading} />
+              <Button type="button" variant="outline" onClick={chooseFolder} disabled={loading}>Browse</Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Files stay in this folder and are edited in place.</p>
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="description" className="text-sm font-medium">
@@ -94,7 +110,7 @@ export function CreateProjectForm({ customTrigger }: { customTrigger?: React.Rea
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Create Project
+              Link Project Folder
             </Button>
           </DialogFooter>
         </form>

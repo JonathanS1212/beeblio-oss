@@ -6,14 +6,9 @@ import { generateText, NoOutputGeneratedError, Output } from "ai";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
-import { InsufficientCreditsError } from "@/lib/credits";
-import { recordByokModelTask, runMeteredModelTask } from "@/lib/credits/metered-model-task";
 import { parseBibtexEntries } from "@/lib/bibtex";
 import { chunkDocumentForReview, MAX_REVIEW_DOCUMENT_CHARACTERS, type DocumentReviewChunk } from "@/lib/document-review-chunks";
-import { getUserPlan } from "@/lib/entitlements/user";
-import { getDecryptedOpenRouterKey } from "@/lib/openrouter-credential";
-import { parseProjectSettings } from "@/lib/project-settings";
-import { readAgentWorkspaceFile } from "@/lib/workspace-gcs";
+import { readAgentWorkspaceFile } from "@/lib/workspace-files";
 import { getOwnedProject } from "./actions";
 import {
   REVIEW_TYPES,
@@ -229,28 +224,9 @@ export async function reviewDocument(input: unknown): Promise<DocumentReviewResu
   if (!project) return failure("Project not found.", "INVALID_REQUEST");
   if (!/\.(md|markdown)$/i.test(parsed.data.filePath)) return failure("Document review currently supports Markdown files.", "INVALID_REQUEST");
 
-  const preference = parseProjectSettings(project.settings).openRouter;
-  const modelSource: "system" | "byok" = preference.enabled ? "byok" : "system";
-  let apiKey: string | undefined;
-  let modelId: string | undefined;
-  if (modelSource === "byok") {
-    if ((await getUserPlan(user.id)) === "free") {
-      return failure("A paid plan is required to use your own OpenRouter key.", "NOT_CONFIGURED");
-    }
-    modelId = preference.modelId;
-    apiKey = (await getDecryptedOpenRouterKey(user.id).catch(() => null)) ?? undefined;
-  } else {
-    apiKey = process.env.OPENROUTER_API_KEY;
-    modelId = process.env.OPENROUTER_MODEL_ID_REVIEW;
-  }
-  if (!apiKey || !modelId) {
-    return failure(
-      modelSource === "byok"
-        ? "Connect and verify your OpenRouter key in Project Settings."
-        : "Document review is not configured.",
-      "NOT_CONFIGURED",
-    );
-  }
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  const modelId = process.env.OPENROUTER_MODEL_ID_REVIEW || process.env.OPENROUTER_MODEL_ID;
+  if (!apiKey || !modelId) return failure("Document review is not configured.", "NOT_CONFIGURED");
 
   let bibliography = "";
   try {
@@ -398,34 +374,8 @@ Document path: ${parsed.data.filePath}\n<section>\n${chunk.content}\n</section>`
       };
     };
 
-    if (modelSource === "byok") {
-      // The user's key pays OpenRouter directly, so the review is never gated
-      // on Beeblio credits; the zero-cost record needs a reservation (ledger
-      // FK) and is simply skipped when none can be made.
-      const review = await runReview();
-      await recordByokModelTask({
-        userId: user.id,
-        reason: `document_review:${parsed.data.reviewType}`,
-        model: modelId,
-        usage: trackedUsage,
-      }).catch(() => undefined);
-      return review;
-    }
-    return runMeteredModelTask({
-      userId: user.id,
-      reason: `document_review:${parsed.data.reviewType}`,
-      role: "main",
-      model: modelId,
-      executionClass: "deep",
-      run: async () => {
-        const review = await runReview();
-        return { value: review, usage: trackedUsage };
-      },
-    });
+    return await runReview();
   } catch (error) {
-    if (error instanceof InsufficientCreditsError) {
-      return failure("You’ve reached your usage limit. Top up or wait for your refresh to continue.", "GENERATION_FAILED");
-    }
     console.error("[document-review] generation failed", error);
     const timedOut = error instanceof Error && /tim(?:e|ed)\s*out|timeout/i.test(error.message);
     return failure(timedOut

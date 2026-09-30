@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { publicFiles, projects } from "@/db/schema";
 import { requireUser } from "@/lib/auth/session";
 import { getOwnedProject } from "./actions";
-import { copyAgentWorkspacePath } from "@/lib/workspace-gcs";
+import { copyAgentWorkspacePath } from "@/lib/workspace-files";
 
 export async function getPublicFileStatus(projectSlug: string, filePath: string) {
   const user = await requireUser();

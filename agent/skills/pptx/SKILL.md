@@ -5,7 +5,7 @@ description: "Create and edit PowerPoint presentations: design polished decks fr
 
 # Part 1 · Slide Design Best Practices
 
-> **Beeblio Job runtime:** execute every command in this skill with `run_analysis`. Every dependency this skill mentions (npm `pptxgenjs`, `react`, `react-dom`, `react-icons`, `sharp`; pip `python-pptx`, `markitdown`, `defusedxml`; LibreOffice, Poppler, Noto CJK fonts) is preinstalled in the disposable Job image — never run `npm install`, `pip install`, or `apt` (Jobs have no network). Resolve `<skill_directory>` as `/opt/beeblio-skills/pptx`. For read-only questions about a deck, the `read_office` tool is a lighter alternative.
+> **Local runtime:** execute commands with `bash` on the user's computer. Install missing tools locally if needed. Resolve `<skill_directory>` as `$BEEBLIO_SKILLS_DIR/pptx`. For read-only questions about a deck, `read_office` is a lighter alternative.
 
 In one sentence: **don't make boring slides.** Bullet points on a white background are forgettable.
 
@@ -99,7 +99,7 @@ CJK fonts are required for Chinese documents (without them Chinese renders as bo
 - **Default to a sans (e.g. Noto Sans SC) for serious office / reporting decks**; reserve handwriting/楷体 faces (e.g. LXGW WenKai) for covers, pull-quotes, or educational accents — never for body paragraphs.
 - Always keep a CJK fallback (e.g. WenQuanYi Zen Hei) so missing glyphs never render as boxes □.
 
-### Fonts in the Beeblio Job image
+### Fonts in the local environment
 
 Noto Sans CJK SC and a Noto CJK fallback are preinstalled under `/usr/share/fonts` (plus DejaVu and Liberation). No font installation is ever needed; verify coverage with `fc-list :lang=zh` if a render shows boxes □.
 
@@ -587,7 +587,7 @@ Skip `word_wrap = False`: it makes text overflow the box invisibly in PowerPoint
 
 ## Dependencies
 
-All preinstalled in the Beeblio agent image (global `require(...)` resolves via `NODE_PATH`):
+Available when installed in the local environment (global `require(...)` resolves via `NODE_PATH`):
 
 - **markitdown** (pip): text extraction
 - **pptxgenjs** (npm): creating presentations

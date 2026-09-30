@@ -16,7 +16,7 @@ import {
   listAgentWorkspaceFiles,
   readAgentWorkspaceFile,
   writeAgentWorkspaceFile,
-} from "@/lib/workspace-gcs";
+} from "@/lib/workspace-files";
 import { getOwnedProject } from "./actions";
 
 const entrySchema = z.object({

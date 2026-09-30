@@ -5,7 +5,6 @@ import { Check, Copy, Mail, Monitor, Moon, Settings, Sun, User } from "lucide-re
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 
-import { authClient } from "@/lib/auth/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -25,8 +24,7 @@ const CONTACT_EMAIL = "mail@raihankalla.id";
  * initialSettings (layout-provided) lets the dialog open without refetching.
  * The project route pins the light theme, so its menu hides the switcher —
  * the choice still applies on every other route's menu.
- * user seeds the trigger with the server-resolved identity so the avatar
- * paints with the page; the client session replaces it once it resolves.
+ * The local identity is supplied by the server.
  */
 export function UserMenu({
   user: initialUser,
@@ -45,7 +43,6 @@ export function UserMenu({
   resolvedDefaultFile?: string;
   showThemeSwitcher?: boolean;
 }) {
-  const { data: session, isPending } = authClient.useSession();
   const { setTheme, theme } = useTheme();
   const [emailCopied, setEmailCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -66,22 +63,8 @@ export function UserMenu({
     }
   };
 
-  const user = session?.user ?? initialUser;
-
-  if (!user) {
-    // A settled session with no user means signed out: nothing to show. While
-    // the session is still resolving (no server seed), hold the trigger's
-    // exact geometry so the header/rail never shifts when the menu appears.
-    if (!isPending) return null;
-    return (
-      <div
-        aria-hidden="true"
-        className="workspace-rail-secondary flex size-9 items-center justify-center rounded-lg"
-      >
-        <span className="size-7 animate-pulse rounded-full bg-muted" />
-      </div>
-    );
-  }
+  const user = initialUser;
+  if (!user) return null;
 
   const name = user.name || user.email;
   const initial = name ? name.charAt(0).toUpperCase() : <User className="h-4 w-4" />;

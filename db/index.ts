@@ -1,23 +1,17 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { mkdirSync } from "node:fs";
+import path from "node:path";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 
 import * as schema from "./schema";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL is not set. Add it to .env.local (see .env.example).",
-  );
-}
+const databasePath = path.resolve(process.env.LOCAL_DB_PATH || ".beeblio/beeblio.sqlite");
+mkdirSync(path.dirname(databasePath), { recursive: true });
+const client = new Database(databasePath);
+client.pragma("journal_mode = WAL");
+client.pragma("busy_timeout = 5000");
+client.pragma("foreign_keys = ON");
 
-/**
- * The single Drizzle client for the application database.
- *
- * DATABASE_URL is a Neon pooled connection string. The neon() HTTP client is
- * stateless and works in both the Next.js server runtime and the long-lived eve
- * agent VM, so one client serves the whole split stack.
- */
-const queryClient = neon(process.env.DATABASE_URL);
-
-export const db = drizzle(queryClient, { schema });
+export const db = drizzle(client, { schema });
 
 export { schema };

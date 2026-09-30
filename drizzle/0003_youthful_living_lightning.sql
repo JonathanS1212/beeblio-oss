@@ -1,1 +1,0 @@
-ALTER TABLE "app"."projects" ADD COLUMN "description" text;

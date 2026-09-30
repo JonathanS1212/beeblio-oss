@@ -1,6 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { defineAgent, defineDynamic } from "eve";
-import { getDecryptedOpenRouterKey } from "../lib/openrouter-credential";
 import { timedModelFetch, turnModelDeadline } from "./lib/model-timeout";
 
 // Direct (non-gateway) models have no AI Gateway context-window metadata, so
@@ -19,21 +18,8 @@ export default defineAgent({
         const auth = ctx.session.auth.current;
         const deadline = turnModelDeadline(auth?.attributes.turnModelDeadlineAt);
         const fetch = timedModelFetch(deadline);
-        if (auth?.attributes.modelSource !== "byok") {
-          const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, fetch });
-          return {
-            model: openrouter(FALLBACK_MODEL_ID),
-            modelContextWindowTokens: FALLBACK_MODEL_CONTEXT_WINDOW_TOKENS,
-          };
-        }
-        const modelId = typeof auth.attributes.modelId === "string" ? auth.attributes.modelId : "";
-        const apiKey = await getDecryptedOpenRouterKey(auth.principalId).catch(() => null);
-        // Fail closed: never fall back to Beeblio's paid model for a BYOK turn.
-        const provider = createOpenRouter({ apiKey: apiKey ?? "missing-byok-credential", fetch });
-        return {
-          model: provider(modelId || "missing/byok-model"),
-          modelContextWindowTokens: Number(auth.attributes.modelContextWindowTokens) || 128_000,
-        };
+        const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, fetch });
+        return { model: openrouter(FALLBACK_MODEL_ID), modelContextWindowTokens: FALLBACK_MODEL_CONTEXT_WINDOW_TOKENS };
       },
     },
   }),
@@ -49,6 +35,6 @@ export default defineAgent({
   },
   build: {
     // Keep the sandbox/storage SDKs external instead of bundling them.
-    externalDependencies: ["@blaxel/core", "@google-cloud/storage", "sharp"],
+    externalDependencies: ["better-sqlite3", "sharp"],
   },
 });

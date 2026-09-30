@@ -1,6 +1,11 @@
 "use server";
 
 import path from "node:path";
+import os from "node:os";
+import { promises as fs } from "node:fs";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { pathToFileURL } from "node:url";
 import { revalidatePath } from "next/cache";
 
 import { requireUser, getUser } from "@/lib/auth/session";
@@ -14,7 +19,6 @@ import {
   PROTECTED_WORKSPACE_MESSAGE,
 } from "@/lib/protected-workspace";
 import { isResearchWorkspaceDirectory } from "@/lib/research-workspace";
-import { convertOfficeToPdf } from "@/lib/document-export/convert-pdf";
 import {
   destinationNameTaken,
   nameConflictMessage,
@@ -31,7 +35,7 @@ import {
   writeAgentWorkspaceFile,
   type WorkspaceFileEntry,
   type WorkspaceRootTree,
-} from "@/lib/workspace-gcs";
+} from "@/lib/workspace-files";
 import { isVisibleWorkspaceEntry } from "@/lib/workspace-entry-visibility";
 import { moveKnowledgePaths, removeKnowledgeUnderPaths } from "@/lib/knowledge";
 
@@ -273,14 +277,24 @@ export async function renderOfficeDocument(projectId: string, filePath: string) 
     return { success: false as const, error: "Unsupported document format." };
   }
   const user = await requireUser();
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "beeblio-office-"));
   try {
     const response = await readAgentWorkspaceFile(user.id, projectId, filePath);
     const input = new Uint8Array(await response.arrayBuffer());
-    const pdf = await convertOfficeToPdf(input, `document${extension}`);
+    const source = path.join(temporary, `document${extension}`);
+    await fs.writeFile(source, input);
+    await promisify(execFile)("soffice", [
+      "--headless",
+      `-env:UserInstallation=${pathToFileURL(path.join(temporary, "profile")).href}`,
+      "--convert-to", "pdf", "--outdir", temporary, source,
+    ], { timeout: 120_000 });
+    const pdf = await fs.readFile(path.join(temporary, "document.pdf"));
     return { success: true as const, kind: "pdf" as const, content: Buffer.from(pdf).toString("base64") };
   } catch (error) {
     console.error("[office-preview] rendering failed", error);
-    return { success: false as const, error: "High-fidelity document preview is unavailable on this server." };
+    return { success: false as const, error: "Install LibreOffice to preview this document locally." };
+  } finally {
+    await fs.rm(temporary, { recursive: true, force: true });
   }
 }
 

@@ -9,7 +9,7 @@ Use this skill when translating complex findings (like those from a scientific p
 
 ## Runtime contract
 
-Produce a self-contained HTML/JS/CSS artifact, or use a lightweight setup (like React/Tailwind) if the environment supports it. Build any generated assets through `run_analysis`; the resulting interactive HTML is viewed in Beeblio's sandboxed browser iframe.
+Produce a self-contained HTML/JS/CSS artifact, or use a lightweight setup (like React/Tailwind) if the environment supports it. Build any generated assets through `bash`; the resulting interactive HTML is viewed in Beeblio's sandboxed browser iframe.
 
 ## Data and narrative extraction
 

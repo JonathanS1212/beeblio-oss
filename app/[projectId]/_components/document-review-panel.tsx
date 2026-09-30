@@ -111,7 +111,6 @@ export function DocumentReviewPanel({ projectId, filePath, content }: {
     setRunning(true); setResult(undefined); setReviewedContent(snapshot); setDismissed(new Set()); setReviewed(new Set());
     try {
       const next = await reviewDocument({ projectId, filePath, content: snapshot, reviewType: selected, tonePreset, styleReference: styleReference || undefined });
-      window.dispatchEvent(new Event("beeblio:credits-changed"));
       setResult(next);
       if (selected === "tone" && !next.error) setToneSettingsOpen(false);
       if (next.error) toast.error(next.error);

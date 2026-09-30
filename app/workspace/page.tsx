@@ -3,15 +3,11 @@ import { UserMenu } from "../_components/user-menu";
 import { ProjectsDashboardClient } from "../_components/projects-dashboard-client";
 import { Brand } from "../_components/brand";
 import { requireUser } from "@/lib/auth/session";
-import { ensureDemoProject } from "@/lib/demo-project";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProjectsDashboard() {
   const user = await requireUser();
-  await ensureDemoProject(user.id).catch((error) => {
-    // A template or workspace outage should not block access to the user's
-    // existing projects. The idempotent provisioner retries on the next visit.
-    console.error("[workspace] demo project provisioning failed", error);
-  });
   const { projects, recentSessions } = await getWorkspaceDashboardData();
 
   return (

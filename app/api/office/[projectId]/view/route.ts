@@ -5,7 +5,7 @@ import {
   officeViewerPublicOrigin,
   signOfficeViewerAccess,
 } from "@/lib/office-viewer-access";
-import { readAgentWorkspaceFile, WorkspaceFileError } from "@/lib/workspace-gcs";
+import { readAgentWorkspaceFile, WorkspaceFileError } from "@/lib/workspace-files";
 
 const officeExtensions = new Set([
   "doc", "docx", "odt",

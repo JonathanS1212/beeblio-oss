@@ -3,17 +3,7 @@ import type { ToolContext } from "eve/tools";
 import path from "node:path";
 import { z } from "zod";
 
-import {
-  calculateChargedCredits,
-  getSpendableCredits,
-  transcriptionCostUsdMicros,
-} from "../../lib/credits/index";
-import {
-  externalToolCostDetails,
-  getReservationContext,
-  meterReservedUsage,
-} from "../lib/credit-meter";
-import { runBlaxelBatchCommand } from "../lib/blaxel-batch-runner";
+import { runLocalSandboxCommand } from "../lib/local-sandbox-runner";
 import { readWorkspaceFile, writeWorkspaceFile } from "../workspace-files";
 import {
   resolveAuthenticatedWorkspace,
@@ -102,7 +92,7 @@ type Cue = {
 /**
  * Transcription is priced per minute of audio, not per call
  * (docs/entitlements-plan.md §5): estimate -> pre-flight affordability ->
- * supplier call -> meter actual duration. The Blaxel image includes ffprobe,
+ * supplier call -> meter actual duration. The local sandbox image includes ffprobe,
  * so affordability uses the media container duration when available and only
  * falls back to a compressed-speech size heuristic for malformed containers.
  */
@@ -177,20 +167,6 @@ export default defineTool({
 
     const estimatedDurationSeconds =
       probedDurationSeconds ?? estimateDurationFromBytes(audio.byteLength);
-
-    const credit = getReservationContext(ctx);
-    const estimatedCostUsdMicros =
-      transcriptionCostUsdMicros(estimatedDurationSeconds);
-
-    if (credit && estimatedCostUsdMicros > 0) {
-      const estimatedCredits = calculateChargedCredits(estimatedCostUsdMicros);
-      const spendable = await getSpendableCredits(credit.userId);
-      if (spendable < estimatedCredits) {
-        throw new Error(
-          `Transcribing this ${Math.ceil(estimatedDurationSeconds / 60)}-minute file needs about ${estimatedCredits} credits, but only ${spendable} are available. Add credits or top up to transcribe it.`,
-        );
-      }
-    }
 
     const transcriptionConfig: Record<string, unknown> = {};
     if (language) {
@@ -273,34 +249,6 @@ export default defineTool({
     const durationSeconds = probedDurationSeconds ?? (words.length
       ? Math.max(...words.map((word) => word.end))
       : estimatedDurationSeconds);
-
-    if (credit) {
-      const costUsdMicros = transcriptionCostUsdMicros(durationSeconds);
-      const charge = costUsdMicros > 0
-        ? externalToolCostDetails({
-            executionClass: credit.executionClass,
-            category: "transcription",
-            toolName: ctx.toolName,
-            costUsdMicros,
-          })
-        : null;
-      if (charge) {
-        try {
-          await meterReservedUsage({
-            ctx,
-            callId: ctx.callId,
-            idempotencyKey: `tool:${credit.sessionId}:${ctx.callId}:transcription`,
-            reason: "tool:transcribe_audio",
-            chargedCredits: charge.chargedCredits,
-            details: charge.details,
-          });
-        } catch (error) {
-          // The supplier call succeeded; keep its result and let
-          // reconciliation surface the billing write failure separately.
-          console.error("Transcription credit bookkeeping failed:", error);
-        }
-      }
-    }
 
     const speakerCount = countSpeakers(words);
     let resultTranscript = transcript.trim();
@@ -727,10 +675,9 @@ async function probeAudioDuration(
   resolvedPath: string,
 ): Promise<number | null> {
   try {
-    const result = await runBlaxelBatchCommand({
+    const result = await runLocalSandboxCommand({
       ctx,
-      identity,
-      command: `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${shellQuote(resolvedPath)}`,
+      command: `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${shellQuote(resolvedPath.replace(/^\/workspace\//, ""))}`,
       timeoutMs: 30_000,
     });
     if (result.exitCode !== 0) return null;

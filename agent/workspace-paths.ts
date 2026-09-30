@@ -1,10 +1,8 @@
 import { createHash } from "node:crypto";
 
 /**
- * Workspace identity + path resolution for the Blaxel/GCS architecture.
- * Durable files live at gs://<GCS_BUCKET>/<userId>/<projectSlug>/...; there
- * is no host directory anymore, so this module only validates identity and
- * maps model-supplied paths to workspace-relative object paths.
+ * Workspace identity and model-facing path validation for local project folders.
+ * The UI and the Eve sandbox operate on the same selected folder.
  */
 
 const workspaceComponentPattern = /^[A-Za-z0-9_-]+$/;

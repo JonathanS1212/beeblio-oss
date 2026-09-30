@@ -46,28 +46,12 @@ function resolveWorkspaceFromToolContext(ctx: ToolContext): WorkspaceStamp | und
   }
 }
 
-async function listProjectObjects(
-  userId: string,
-  projectSlug: string,
-): Promise<Map<string, string>> {
-  // Object generations are the change signal (they increment on every
-  // overwrite, from any writer), replacing the mtime snapshots the
-  // host-filesystem sweep used.
-  const { workspaceBucket } = await import("../workspace-files");
-  const bucket = workspaceBucket();
-  const prefix = `${userId}/${projectSlug}/`;
+async function listProjectObjects(userId: string, projectSlug: string): Promise<Map<string, string>> {
+  const { listWorkspaceFilesRecursive, statWorkspaceFile } = await import("../../lib/workspace-files");
+  const listing = await listWorkspaceFilesRecursive(userId, projectSlug, 100000);
   const versions = new Map<string, string>();
-  type PageQuery = { prefix: string; pageToken?: string };
-  let query: PageQuery | undefined = { prefix };
-  while (query) {
-    const page = await bucket.getFiles({ ...query, autoPaginate: false }) as unknown as [unknown[], PageQuery | null | undefined];
-    const objects = page[0];
-    for (const object of objects as unknown as { name: string; metadata?: { generation?: string } }[]) {
-      const relative = object.name.slice(prefix.length);
-      if (relative === "" || relative.endsWith("/")) continue;
-      versions.set(relative, object.metadata?.generation ?? "");
-    }
-    query = page[1] ?? undefined;
+  for (const file of listing.entries) {
+    if (!file.isDir) versions.set(file.path, (await statWorkspaceFile(userId, projectSlug, file.path)).generation);
   }
   return versions;
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, FileText, Info, KeyRound, Loader2, Save, Trash2 } from "lucide-react";
+import { FileText, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,6 @@ import {
   type ProjectSettings,
 } from "@/lib/project-settings";
 import { cn } from "@/lib/utils";
-import { RECOMMENDED_OPENROUTER_MODELS } from "@/lib/openrouter-byok-types";
 import { listAllFiles } from "../file-actions";
 import {
   clearProjectDefaultOpenFile,
@@ -75,7 +74,7 @@ const PREVIEW_REFERENCE: CitationReference = {
 };
 
 /** Sections of the settings dialog, in tab order. */
-type SettingsTab = "general" | "formatting" | "completion" | "model";
+type SettingsTab = "general" | "formatting" | "completion";
 
 /**
  * Project preferences dialog: the project's name and description, the default
@@ -123,16 +122,6 @@ export function ProjectSettingsDialog({
   const [activeIndex, setActiveIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
-  const [byokEnabled, setByokEnabled] = useState(false);
-  const [byokInfoOpen, setByokInfoOpen] = useState(false);
-  const [selectedModelType, setSelectedModelType] = useState<string>(RECOMMENDED_OPENROUTER_MODELS[0][0]);
-  const [customModelId, setCustomModelId] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [showKey, setShowKey] = useState(false);
-  const [paid, setPaid] = useState(false);
-  const [hasCredential, setHasCredential] = useState(false);
-  const [maskedKey, setMaskedKey] = useState<string | null>(null);
-  const [testing, setTesting] = useState(false);
   // Latest-prop refs: the open effect below must read the freshest settings
   // without listing them as deps (a revalidate while the dialog is open must
   // not reset in-progress edits).
@@ -168,17 +157,6 @@ export function ProjectSettingsDialog({
     setDocumentDefaults(current?.documentDefaults ?? DEFAULT_DOCUMENT_SETTINGS);
     setCompletion(current?.completion ?? DEFAULT_COMPLETION_SETTINGS);
     setIncludeSystemSkills(current?.includeSystemSkills ?? false);
-    setByokEnabled(current?.openRouter.enabled ?? false);
-    setByokInfoOpen(false);
-    const savedModel = current?.openRouter.modelId ?? RECOMMENDED_OPENROUTER_MODELS[0][0];
-    if (RECOMMENDED_OPENROUTER_MODELS.some(([id]) => id === savedModel)) {
-      setSelectedModelType(savedModel);
-      setCustomModelId("");
-    } else {
-      setSelectedModelType("custom");
-      setCustomModelId(savedModel);
-    }
-    setApiKey("");
     setError(undefined);
     setSuggestions(undefined);
     setBibFiles(undefined);
@@ -194,29 +172,6 @@ export function ProjectSettingsDialog({
         setDescription((value) => (value === "" ? details.description : value));
       }).catch(() => undefined);
     }
-    void fetch(`/api/openrouter?projectId=${encodeURIComponent(projectId)}`, { cache: "no-store" })
-      .then((response) => response.json())
-      .then((data) => {
-        if (!cancelled) {
-          setPaid(Boolean(data.paid));
-          setHasCredential(Boolean(data.hasCredential));
-          setMaskedKey(typeof data.maskedKey === "string" ? data.maskedKey : null);
-          if (typeof data.modelId === "string" && data.modelId.trim()) {
-            const model = data.modelId.trim();
-            if (RECOMMENDED_OPENROUTER_MODELS.some(([id]) => id === model)) {
-              setSelectedModelType(model);
-              setCustomModelId("");
-            } else {
-              setSelectedModelType("custom");
-              setCustomModelId(model);
-            }
-          }
-          if (typeof data.enabled === "boolean") {
-            setByokEnabled(data.enabled);
-          }
-        }
-      })
-      .catch(() => undefined);
     (async () => {
       try {
         // Files are mutable by other writers (the agent, other panels), so
@@ -317,32 +272,6 @@ export function ProjectSettingsDialog({
         setError(systemSkillsResult.error);
         return;
       }
-      if (paid) {
-        const effectiveModelId = selectedModelType === "custom"
-          ? customModelId.trim()
-          : selectedModelType;
-
-        if (byokEnabled && !effectiveModelId) {
-          setError("Please enter a custom Model ID or select a recommended model.");
-          return;
-        }
-
-        const byokResponse = await fetch("/api/openrouter", {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            projectId,
-            enabled: byokEnabled,
-            modelId: effectiveModelId || RECOMMENDED_OPENROUTER_MODELS[0][0],
-            ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
-          }),
-        });
-        const byokResult = await byokResponse.json().catch(() => null) as { error?: string } | null;
-        if (!byokResponse.ok) {
-          setError(byokResult?.error ?? "OpenRouter settings could not be saved.");
-          return;
-        }
-      }
       window.dispatchEvent(new CustomEvent(COMPLETION_SETTINGS_CHANGED_EVENT));
       router.refresh();
       toast.success("Settings saved");
@@ -401,10 +330,6 @@ export function ProjectSettingsDialog({
             >
               AI Completion
             </button>
-            <button type="button" role="tab" aria-selected={activeTab === "model"}
-              // onClick={() => notifyUpcomingFeature("AI Model")}
-              onClick={() => setActiveTab("model")}
-              className={cn("rounded-md px-2 py-1.5 text-xs font-medium transition-colors", activeTab === "model" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>AI Model</button>
           </div>
 
           {activeTab === "general" ? <section role="tabpanel" className="flex flex-col gap-4" aria-label="General">
@@ -763,138 +688,6 @@ export function ProjectSettingsDialog({
               {/* <p className="text-[11px] text-muted-foreground">
                 Filters apply to both the library and literature search results.
               </p> */}
-            </div>
-          </section> : null}
-
-          {activeTab === "model" ? <section role="tabpanel" className="flex flex-col gap-4" aria-label="AI model">
-            {!paid ? <div className="rounded-lg border bg-muted/35 p-3 text-xs text-muted-foreground">Bring Your Own Key (BYOK) is available on Plus and Pro plans.</div> : null}
-            {/* One inert attribute disables the whole block for the free tier
-                (pointer, keyboard, and screen reader); opacity does the greying. */}
-            <div className={cn("flex flex-col gap-4", !paid && "opacity-50")} inert={!paid}>
-              <div className="flex items-center justify-between gap-3">
-                <div><Label className="text-xs">Use Your Own Key</Label><p className="text-xs text-muted-foreground">Applies to new conversations and editor AI tasks.</p></div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    aria-label={byokInfoOpen ? "Hide details about what uses your key" : "Show details about what uses your key"}
-                    aria-expanded={byokInfoOpen}
-                    onClick={() => setByokInfoOpen((value) => !value)}
-                    disabled={saving}
-                    className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
-                  >
-                    <Info className="size-3.5" />
-                  </button>
-                  <Switch checked={byokEnabled} onCheckedChange={setByokEnabled} disabled={saving} />
-                </div>
-              </div>
-              {byokInfoOpen ? (
-                <p className="animate-in fade-in text-[11px] leading-relaxed text-muted-foreground">
-                  Your key powers most AI work: conversations, sentence suggestions, equations, and document reviews. Multimodal tasks (image analysis, audio transcription, knowledge base RAG, and the cloud compute sandbox) always use Beeblio credits.
-                </p>
-              ) : null}
-              <div className="rounded-lg border bg-muted/35 p-3 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1 font-medium text-foreground"><KeyRound className="size-3.5" />Encrypted at Rest</span><p className="mt-1">Your key is protected with AES-256-GCM and decrypted only on the server when contacting OpenRouter. It is never included in prompts or project files.</p></div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="openrouter-key" className="text-xs"><a className="underline decoration-dotted" href="https://openrouter.ai/workspaces/default/keys" target="_blank" rel="noreferrer">OpenRouter API Key</a></Label>
-                <div className="flex gap-2"><div className="relative flex-1"><Input id="openrouter-key" type={showKey ? "text" : "password"} value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={maskedKey ?? "sk-or-v1-…"} autoComplete="off" className="pr-10" /><button type="button" aria-label={showKey ? "Hide key" : "Show key"} onClick={() => setShowKey((value) => !value)} className="absolute inset-y-0 right-0 px-3 text-muted-foreground">{showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></div>
-                  {hasCredential ? <Button type="button" variant="outline" size="icon" aria-label="Remove saved key" onClick={async () => { const response = await fetch(`/api/openrouter?projectId=${encodeURIComponent(projectId)}`, { method: "DELETE" }); if (response.ok) { setHasCredential(false); setMaskedKey(null); setByokEnabled(false); toast.success("OpenRouter key removed"); } }}><Trash2 /></Button> : null}</div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="openrouter-model" className="text-xs">Model</Label>
-                <Select
-                  value={selectedModelType}
-                  onValueChange={(value) => {
-                    setSelectedModelType(value);
-                    setError(undefined);
-                  }}
-                  disabled={saving}
-                >
-                  <SelectTrigger id="openrouter-model" className="h-9 w-full bg-card text-xs">
-                    <SelectValue placeholder="Select a model" />
-                  </SelectTrigger>
-                  <SelectContent className="w-[var(--radix-select-trigger-width)] min-w-80">
-                    <SelectGroup>
-                      <SelectLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Popular Models</SelectLabel>
-                      {RECOMMENDED_OPENROUTER_MODELS.map(([id, label]) => (
-                        <SelectItem key={id} value={id} className="text-xs">
-                          <span className="truncate font-medium">{label}</span>
-                          <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground pl-4">{id}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                    <SelectSeparator />
-                    <SelectGroup>
-                      <SelectItem value="custom" className="text-xs font-medium">
-                        Custom Model ID
-                      </SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-
-                {selectedModelType === "custom" ? (
-                  <div className="flex flex-col gap-1.5 pt-1 animate-in fade-in">
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="openrouter-custom-model" className="text-xs text-muted-foreground">
-                        Custom Model ID
-                      </Label>
-                      <a
-                        className="shrink-0 text-[11px] text-primary underline"
-                        href="https://openrouter.ai/models"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Browse Models ↗
-                      </a>
-                    </div>
-
-                    <Input
-                      id="openrouter-custom-model"
-                      className="h-9 font-mono text-xs md:text-xs"
-                      value={customModelId}
-                      disabled={saving}
-                      placeholder="e.g. deepseek/deepseek-v4.1-flash"
-                      autoFocus
-                      autoComplete="off"
-                      onChange={(event) => {
-                        setCustomModelId(event.target.value);
-                        setError(undefined);
-                      }}
-                    />
-
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Select <span className="font-medium text-foreground">Custom Model ID</span> to specify any model from <a className="text-primary underline" href="https://openrouter.ai/models" target="_blank" rel="noreferrer">openrouter.ai/models</a>.
-                  </p>
-                )}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={testing || (!apiKey.trim() && !hasCredential) || (selectedModelType === "custom" && !customModelId.trim())}
-                onClick={async () => {
-                  setTesting(true);
-                  setError(undefined);
-                  const effectiveModelId = selectedModelType === "custom" ? customModelId.trim() : selectedModelType;
-                  try {
-                    const response = await fetch("/api/openrouter", {
-                      method: "POST",
-                      headers: { "content-type": "application/json" },
-                      body: JSON.stringify({
-                        modelId: effectiveModelId,
-                        ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
-                      }),
-                    });
-                    const result = await response.json().catch(() => null) as { error?: string } | null;
-                    if (!response.ok) setError(result?.error ?? "OpenRouter test failed.");
-                    else toast.success("OpenRouter key and model verified");
-                  } finally {
-                    setTesting(false);
-                  }
-                }}
-              >
-                {testing ? <Loader2 className="animate-spin" /> : <KeyRound />}Test Connection
-              </Button>
             </div>
           </section> : null}
 

@@ -13,7 +13,7 @@ When asked to clean, merge, or wrangle datasets, apply the following rigorous st
 
 ## 2. Technical Execution
 - Inspect files by path and choose a reader from the actual format: pandas/Polars for delimited data, PyArrow/DuckDB for Parquet and larger-than-memory workflows, openpyxl/odfpy/pyxlsb for spreadsheets, and PyReadStat for SPSS/Stata/SAS metadata formats.
-- Save the complete `.py` source under `/workspace/3-Analysis`, pass input/output paths as command-line arguments, execute it with `run_analysis`, and retain the script as the audit trail. Never paste dataset contents into generated code.
+- Save the complete `.py` source under `/workspace/3-Analysis`, pass input/output paths as command-line arguments, execute it with `bash`, and retain the script as the audit trail. Never paste dataset contents into generated code.
 - For large inputs, scan metadata first and use chunking, lazy frames, Arrow datasets, or DuckDB queries rather than loading the entire file blindly.
 - Print only compact validation summaries to stdout; write cleaned data, profiles, and detailed diagnostics to durable files.
 
@@ -37,5 +37,5 @@ When asked to clean, merge, or wrangle datasets, apply the following rigorous st
 
 ## 7. Sandbox Execution & Scripting Best Practices (CRITICAL)
 - **Choose the runtime deliberately:** Use saved Python scripts for tabular and scientific workflows. Use JavaScript only when it is genuinely a better fit. Do not compress substantial programs into shell one-liners.
-- **Use normal programs:** `run_analysis` executes saved scripts and native utilities in disposable Batch jobs. Keep source code in `/workspace/3-Analysis`, pass paths as arguments, and rely only on baked packages.
-- **Output Destination:** `/workspace` is durable GCS-backed project storage; `/tmp` and job scratch directories are ephemeral. Save every deliverable under `/workspace`, using `/tmp` only for disposable intermediates.
+- **Use normal programs:** `bash` executes saved scripts and native utilities on the local computer. Keep source code in `/workspace/3-Analysis`, pass paths as arguments, and use installed local packages.
+- **Output Destination:** `/workspace` is the linked local project folder; `/tmp` is temporary host storage. Save every deliverable under `/workspace`, using `/tmp` only for disposable intermediates.

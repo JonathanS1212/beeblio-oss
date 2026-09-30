@@ -1,15 +1,9 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
-import { InsufficientCreditsError } from "@/lib/credits";
-import { recordByokModelTask, recordIncludedModelTask, runMeteredModelTask } from "@/lib/credits/metered-model-task";
 import { integerEnv } from "@/lib/env-config";
-import { getDecryptedOpenRouterKey } from "@/lib/openrouter-credential";
-import { getUserPlan } from "@/lib/entitlements/user";
-import { hasUnlimitedEditorAi } from "@/lib/entitlements/plans";
 import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
-import { parseProjectSettings } from "@/lib/project-settings";
 
 export const EQUATION_PROMPT_MAX_CHARS = 1_000;
 export const EQUATION_LATEX_MAX_CHARS = 4_000;
@@ -29,23 +23,9 @@ export async function generateEquationLatex(input: {
 }): Promise<{ latex: string; modelSource: "system" | "byok" } | { error: string }> {
   const project = await db.query.projects.findFirst({ where: and(eq(projects.slug, input.projectId), eq(projects.userId, input.userId)) });
   if (!project) return { error: "Project not found." };
-  const preference = parseProjectSettings(project.settings).openRouter;
-  const modelSource = preference.enabled ? "byok" : "system";
-  const plan = await getUserPlan(input.userId);
-  let modelId: string | undefined;
-  let apiKey: string | undefined;
-  if (modelSource === "byok") {
-    if (plan === "free") {
-      return { error: "A paid plan is required to use your own OpenRouter key." };
-    }
-    modelId = preference.modelId;
-    apiKey = await getDecryptedOpenRouterKey(input.userId) ?? undefined;
-    if (!apiKey) return { error: "Connect and verify your OpenRouter key in Project Settings." };
-  } else {
-    modelId = process.env.OPENROUTER_MODEL_ID_LITE;
-    apiKey = process.env.OPENROUTER_API_KEY;
-    if (!modelId || !apiKey) return { error: "Equation AI is not configured." };
-  }
+  const modelId = process.env.OPENROUTER_MODEL_ID_LITE || process.env.OPENROUTER_MODEL_ID;
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!modelId || !apiKey) return { error: "Equation AI is not configured." };
 
   try {
     const openrouter = createOpenRouter({ apiKey });
@@ -64,47 +44,11 @@ export async function generateEquationLatex(input: {
           temperature: 0.1,
           timeout: integerEnv("EQUATION_AI_TIMEOUT_MS", 30_000, 1_000),
         });
-    let generatedText: string;
-    if (modelSource === "byok") {
-      const result = await generate();
-      generatedText = result.text;
-      // The user's own key paid for this; keep a zero-cost record so the
-      // activity feed can show it with a BYOK marker.
-      await recordByokModelTask({
-        userId: input.userId,
-        reason: "equation_ai:model",
-        model: modelId,
-        usage: result.usage,
-      }).catch(() => undefined);
-    } else if (hasUnlimitedEditorAi(plan)) {
-      const result = await generate();
-      generatedText = result.text;
-      await recordIncludedModelTask({
-        userId: input.userId,
-        reason: "equation_ai:model",
-        model: modelId,
-        usage: result.usage,
-      }).catch((error) => console.error("[equation-ai] included usage recording failed", error));
-    } else {
-      generatedText = await runMeteredModelTask({
-        userId: input.userId,
-        reason: "equation_ai:model",
-        role: "lite",
-        model: modelId,
-        executionClass: "economy",
-        run: async () => {
-          const result = await generate();
-          return { value: result.text, usage: result.usage };
-        },
-      });
-    }
+    const generatedText = (await generate()).text;
     const latex = normalizeLatex(generatedText).slice(0, EQUATION_LATEX_MAX_CHARS);
     if (!latex) return { error: "The model returned an empty equation. Try rephrasing." };
-    return { latex, modelSource };
+    return { latex, modelSource: "system" };
   } catch (error) {
-    if (error instanceof InsufficientCreditsError) {
-      return { error: "You’ve reached your usage limit. Top up or wait for your refresh to continue." };
-    }
     console.error("Equation LaTeX generation failed:", error);
     return { error: "Equation generation failed. Try again in a moment." };
   }

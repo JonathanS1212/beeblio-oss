@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import path from "node:path";
 
-import { isBlaxelBatchEnabled, runBlaxelBatchCommand } from "../lib/blaxel-batch-runner";
+import { runLocalSandboxCommand } from "../lib/local-sandbox-runner";
 import {
   resolveAuthenticatedWorkspace,
   toWorkspaceRelativePath,
@@ -14,8 +14,8 @@ function shellQuote(value: string): string {
 
 export default defineTool({
   description:
-    "Extract MP3 audio from a workspace video using FFmpeg in a disposable Blaxel Job. " +
-    "The output must be a new file under /workspace/2-Data/derived, /workspace/3-Analysis, or /workspace/4-Reports.",
+    "Extract MP3 audio from a workspace video using FFmpeg in a persistent local sandbox. " +
+    "The output is written directly into the selected project folder.",
   inputSchema: z.object({
     inputPath: z.string().describe("The absolute path to the video file (e.g., /workspace/interview_01.mp4)."),
     outputPath: z.string().describe("A new MP3 path in a generated-output area (e.g., /workspace/3-Analysis/audio.mp3)."),
@@ -26,9 +26,6 @@ export default defineTool({
     bytes: z.number().int().positive(),
   }),
   async execute({ inputPath, outputPath }, ctx) {
-    if (!isBlaxelBatchEnabled()) {
-      throw new Error("Blaxel Batch audio processing is disabled; set BLAXEL_BATCH_ENABLED=true");
-    }
     const auth = ctx.session.auth.current;
     const { identity } = resolveAuthenticatedWorkspace({
       principalId: auth?.principalId,
@@ -50,15 +47,14 @@ export default defineTool({
       throw new Error("Audio outputPath must be under /workspace/2-Data/derived, /workspace/3-Analysis, or /workspace/4-Reports");
     }
     const command = [
-      `test -f ${shellQuote(actualInputPath)}`,
-      `test ! -e ${shellQuote(actualOutputPath)}`,
-      `mkdir -p ${shellQuote(path.posix.dirname(actualOutputPath))}`,
-      `ffmpeg -nostdin -hide_banner -loglevel error -i ${shellQuote(actualInputPath)} -vn -codec:a libmp3lame ${shellQuote(actualOutputPath)}`,
-      `stat -c %s ${shellQuote(actualOutputPath)}`,
+      `test -f ${shellQuote(inputRelative)}`,
+      `test ! -e ${shellQuote(outputRelative)}`,
+      `mkdir -p ${shellQuote(path.posix.dirname(outputRelative))}`,
+      `ffmpeg -nostdin -hide_banner -loglevel error -i ${shellQuote(inputRelative)} -vn -codec:a libmp3lame ${shellQuote(outputRelative)}`,
+      `wc -c < ${shellQuote(outputRelative)}`,
     ].join(" && ");
-    const result = await runBlaxelBatchCommand({
+    const result = await runLocalSandboxCommand({
       ctx,
-      identity,
       command,
       timeoutMs: 10 * 60_000,
     });

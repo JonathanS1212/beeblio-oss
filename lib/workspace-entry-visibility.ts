@@ -1,4 +1,4 @@
-import type { WorkspaceFileEntry } from "./workspace-gcs";
+import type { WorkspaceFileEntry } from "./workspace-files";
 
 const PYTHON_CACHE_DIRECTORY = "__pycache__";
 const PYTHON_CACHE_FILE_PATTERN = /\.(?:pyc|pyo)$/i;

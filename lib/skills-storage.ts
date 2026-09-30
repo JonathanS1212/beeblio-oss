@@ -2,7 +2,7 @@ import { mintAgentToken } from "@/lib/agent-token";
 
 /**
  * Server-side client for the user-scoped agent skills API served by the eve
- * channel in agent/channels/skills.ts. Mirrors lib/workspace-gcs.ts: the
+ * channel in agent/channels/skills.ts. Mirrors lib/workspace-files.ts: the
  * Next.js server mints the same short-lived agent JWT used for chat and
  * files, so the agent derives the user from the verified token.
  */

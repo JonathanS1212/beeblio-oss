@@ -8,7 +8,7 @@ description: Generate publication-ready charts with native Python visualization 
 When asked to create charts or visualizations, you MUST adhere to the following academic and publication-ready guidelines:
 
 ## Library Preferences & Technical Execution
-- Default to a saved Python script under `/workspace/3-Analysis` using pandas/Polars plus Matplotlib or Seaborn, executed with `run_analysis`. The Batch image sets Matplotlib's non-interactive `Agg` backend automatically.
+- Default to a saved Python script under `/workspace/3-Analysis` using pandas/Polars plus Matplotlib or Seaborn, executed with `bash`. Set Matplotlib's non-interactive `Agg` backend for headless scripts.
 - Read source datasets directly by path. Keep chart-specific transformations in the script and avoid creating a separate derived dataset unless the transformation is analytically meaningful or the user requests it.
 - Export PNG for ordinary display, SVG for editable vector graphics, and PDF for print workflows. Use explicit figure dimensions, DPI, and `bbox_inches="tight"` where appropriate.
 - Keep the successful script beside its outputs as the reproducible specification. Record input paths and relevant filter/aggregation choices near the top of the script.

@@ -1,1 +1,0 @@
-ALTER TABLE "app"."blog_posts" ADD COLUMN "author_title" text;

@@ -53,7 +53,6 @@ export function MarkdownDownloadMenu({
         <TooltipContent>Download</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" className="w-45 min-w-45">
-        <DropdownMenuItem onSelect={() => void download("pdf")}><FileText />PDF</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void download("docx")}><FileText />DOCX</DropdownMenuItem>
         <DropdownMenuItem
           onSelect={() => void download("docx-mendeley")}

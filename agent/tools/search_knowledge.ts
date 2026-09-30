@@ -1,9 +1,7 @@
 import { defineTool, type ToolContext } from "eve/tools";
 import { z } from "zod";
 
-import { getKnowledgeQueryRate } from "../../lib/credits/index";
 import { searchProjectKnowledge } from "../../lib/knowledge";
-import { getReservationContext, meterReservedUsage, modelCostDetails } from "../lib/credit-meter";
 import { resolveAuthenticatedWorkspace, toWorkspaceRelativePath } from "../workspace-paths";
 
 export default defineTool({
@@ -21,40 +19,12 @@ export default defineTool({
       projectSlug: auth?.attributes?.projectSlug,
       sessionId: ctx.session.id,
     });
-    const { result, usage } = await searchProjectKnowledge(identity.userId, identity.projectSlug, query, {
+    const { result } = await searchProjectKnowledge(identity.userId, identity.projectSlug, query, {
       abortSignal: ctx.abortSignal,
       filePaths: filePaths?.map(toWorkspaceRelativePath),
       topK,
     });
-    await meterKnowledgeQuery(ctx, usage);
     return result;
   },
 });
 
-async function meterKnowledgeQuery(
-  ctx: ToolContext,
-  usage: { inputTokens: number; outputTokens: number } | undefined,
-) {
-  const credit = getReservationContext(ctx);
-  if (!credit || !usage) return;
-  const charge = modelCostDetails({
-    rate: getKnowledgeQueryRate(),
-    usage,
-    executionClass: credit.executionClass,
-    category: "knowledge",
-    toolName: ctx.toolName,
-  });
-  if (charge.chargedCredits <= 0) return;
-  try {
-    await meterReservedUsage({
-      ctx,
-      callId: ctx.callId,
-      idempotencyKey: `tool:${credit.sessionId}:${ctx.callId}:knowledge_search`,
-      reason: "tool:search_knowledge",
-      chargedCredits: charge.chargedCredits,
-      details: charge.details,
-    });
-  } catch (error) {
-    console.error("Knowledge search credit bookkeeping failed:", error);
-  }
-}

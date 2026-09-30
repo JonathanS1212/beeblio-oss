@@ -8,7 +8,6 @@ import { referenceFromEntry } from "../../lib/citations";
 import { convertMarkdownToDocx } from "../../lib/document-export/convert-docx";
 import { convertMarkdownToLatexBundle } from "../../lib/document-export/convert-latex";
 import { convertMarkdownToPortableBundle } from "../../lib/document-export/convert-markdown";
-import { convertHtmlToPdf } from "../../lib/document-export/convert-pdf";
 import {
   preprocessMarkdown,
   extractMermaidBlocks,
@@ -17,8 +16,6 @@ import {
   type ImageLoader,
 } from "../../lib/document-export/markdown-preprocess";
 import { rasterizeSvgToPngDataUrl } from "../../lib/document-export/rasterize-svg";
-import { renderMermaidDiagrams } from "../../lib/document-export/render-mermaid";
-import { renderPrintHtml } from "../../lib/document-export/render-html";
 import { separateProseLines } from "../../lib/document-export/paragraph-lines";
 import { renderMarkdownWithZoteroCitations } from "../../lib/document-export/zotero-fields";
 import { renderMarkdownBibliography, stripYamlFrontMatter } from "../../lib/markdown-bibliography";
@@ -43,9 +40,9 @@ const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
 const inputSchema = z.object({
   sourcePath: z.string().min(1).max(1_024).describe("Existing .md or .markdown file in /workspace."),
   outputPath: z.string().min(1).max(1_024).describe(
-    "New output path. Use .pdf for PDF, .docx for either Word format, .zip for LaTeX, and .md for portable Markdown.",
+    "New output path. Use .docx for either Word format, .zip for LaTeX, and .md for portable Markdown.",
   ),
-  format: z.enum(["pdf", "docx", "docx-zotero", "latex", "markdown"]),
+  format: z.enum(["docx", "docx-zotero", "latex", "markdown"]),
 }).strict();
 
 function stemOf(filePath: string): string {
@@ -53,7 +50,6 @@ function stemOf(filePath: string): string {
 }
 
 function expectedExtension(format: z.infer<typeof inputSchema>["format"]): string {
-  if (format === "pdf") return ".pdf";
   if (format === "docx" || format === "docx-zotero") return ".docx";
   if (format === "latex") return ".zip";
   return ".md";
@@ -112,7 +108,7 @@ function rasterizingImageLoader(base: ImageLoader): ImageLoader {
 export default defineTool({
   description:
     "Convert an existing Markdown workspace file with Beeblio's high-fidelity editor export service. " +
-    "Use this tool whenever the user asks to export or convert .md/.markdown to PDF, DOCX, DOCX with live Zotero fields, " +
+    "Use this tool whenever the user asks to export or convert .md/.markdown to DOCX, DOCX with live Zotero fields, " +
     "a portable Markdown copy, or a LaTeX project bundle. It preserves supported Markdown formatting, math, citations, " +
     "bibliographies, callouts, and workspace images better than recreating an Office file from scratch. " +
     "The source must already be saved and the output must be a new file; the tool never overwrites.",
@@ -145,7 +141,7 @@ export default defineTool({
     const warnings: string[] = [];
 
     if (format === "latex") {
-      const diagrams = await renderMermaidDiagrams(extractMermaidBlocks(markdown));
+      const diagrams = extractMermaidBlocks(markdown).map(() => null);
       bytes = await convertMarkdownToLatexBundle({
         markdown: bibliography ? markdown : renderMarkdownBibliography(markdown, { references }),
         stem,
@@ -182,20 +178,15 @@ export default defineTool({
         warnings.push("No references.bib entries were available, so citations were exported as plain text.");
       }
       // ```mermaid fences have no browser-rendered snapshot on this path;
-      // render them server-side (Gotenberg Chromium) so exports match the
-      // editor's download button. Failed renders stay as code blocks.
-      const diagrams = await renderMermaidDiagrams(extractMermaidBlocks(source));
-      if (format === "pdf") {
-        const prepared = await preprocessMarkdown(source, { diagrams, diagramTarget: "html", loadImage });
-        bytes = await convertHtmlToPdf(await renderPrintHtml(prepared, `${stem}.pdf`));
-      } else {
-        const prepared = await preprocessMarkdown(source, {
-          diagrams,
-          diagramTarget: "pandoc",
-          loadImage: rasterizingImageLoader(loadImage),
-        });
-        bytes = await convertMarkdownToDocx(prepared, { rawOpenXml: liveCitations });
-      }
+      // Browser rendering is available in the visual editor; the agent
+      // preserves Mermaid source fences when exporting on the server.
+      const diagrams = extractMermaidBlocks(source).map(() => null);
+      const prepared = await preprocessMarkdown(source, {
+        diagrams,
+        diagramTarget: "pandoc",
+        loadImage: rasterizingImageLoader(loadImage),
+      });
+      bytes = await convertMarkdownToDocx(prepared, { rawOpenXml: liveCitations });
       const failedDiagrams = diagrams.filter((diagram) => diagram === null).length;
       if (failedDiagrams > 0) {
         warnings.push(

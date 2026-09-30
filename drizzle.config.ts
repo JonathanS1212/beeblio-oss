@@ -8,8 +8,8 @@ dotenv.config({ path: ".env.local" });
 export default defineConfig({
   schema: "./db/schema.ts",
   out: "./drizzle",
-  dialect: "postgresql",
+  dialect: "sqlite",
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    url: process.env.LOCAL_DB_PATH || ".beeblio/beeblio.sqlite",
   },
 });

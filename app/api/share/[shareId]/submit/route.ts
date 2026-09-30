@@ -9,7 +9,7 @@ import { HONEYPOT_KEY, type FormDefinition } from "@/lib/forms/schema";
 import {
   AgentWorkspaceError,
   readAgentWorkspaceFile,
-} from "@/lib/workspace-gcs";
+} from "@/lib/workspace-files";
 
 /**
  * Public form submission endpoint. The generated form runtime posts here as a

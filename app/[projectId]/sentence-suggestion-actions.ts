@@ -8,11 +8,6 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { parseBibtexEntries, type BibtexEntry } from "@/lib/bibtex";
 import { cleanBibtexText } from "@/lib/citations";
-import { InsufficientCreditsError } from "@/lib/credits";
-import { recordByokModelTask, recordIncludedModelTask, runMeteredModelTask } from "@/lib/credits/metered-model-task";
-import { getDecryptedOpenRouterKey } from "@/lib/openrouter-credential";
-import { getUserPlan } from "@/lib/entitlements/user";
-import { hasUnlimitedEditorAi } from "@/lib/entitlements/plans";
 import { integerEnv } from "@/lib/env-config";
 import { fileStem } from "@/lib/literature/citation-identity";
 import type { LiteratureItem } from "@/lib/literature/types";
@@ -26,7 +21,7 @@ import { PROJECT_BIBLIOGRAPHY_PATH } from "@/lib/project-bibliography";
 import {
   AgentWorkspaceError,
   readAgentWorkspaceFile,
-} from "@/lib/workspace-gcs";
+} from "@/lib/workspace-files";
 import { getOwnedProject } from "./actions";
 import { searchLiterature } from "./literature-actions";
 
@@ -344,24 +339,9 @@ export async function generateSentenceSuggestion(input: unknown): Promise<Senten
   if (!project) return { error: "Project not found." };
 
   const completionSettings = parseProjectSettings(project.settings).completion ?? DEFAULT_COMPLETION_SETTINGS;
-  const openRouterSettings = parseProjectSettings(project.settings).openRouter;
-  if (!completionSettings.enabled) return { error: "Sentence suggestions are disabled for this project." };
-  const modelSource = openRouterSettings.enabled ? "byok" : "system";
-  const plan = await getUserPlan(user.id);
-  let modelId: string | undefined;
-  let apiKey: string | undefined;
-  if (modelSource === "byok") {
-    if (plan === "free") {
-      return { error: "A paid plan is required to use your own OpenRouter key." };
-    }
-    modelId = openRouterSettings.modelId;
-    apiKey = await getDecryptedOpenRouterKey(user.id) ?? undefined;
-    if (!apiKey) return { error: "Connect and verify your OpenRouter key in Project Settings." };
-  } else {
-    modelId = process.env.OPENROUTER_MODEL_ID_LITE;
-    apiKey = process.env.OPENROUTER_API_KEY;
-    if (!modelId || !apiKey) return { error: "Sentence suggestions are not configured." };
-  }
+  const modelId = process.env.OPENROUTER_MODEL_ID_LITE || process.env.OPENROUTER_MODEL_ID;
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!modelId || !apiKey) return { error: "Sentence suggestions are not configured." };
   const bounds = completionBounds(completionSettings.filters);
 
   // The library read gates the model call, so it runs up front; the literature
@@ -391,43 +371,8 @@ export async function generateSentenceSuggestion(input: unknown): Promise<Senten
           temperature: 0.5,
           timeout: integerEnv("SENTENCE_SUGGESTION_TIMEOUT_MS", 12_000, 1_000),
         });
-    if (modelSource === "byok") {
-      const result = await generate();
-      modelOutput = result.text;
-      // The user's own key paid for this; keep a zero-cost record so the
-      // activity feed can show it with a BYOK marker.
-      await recordByokModelTask({
-        userId: user.id,
-        reason: "sentence_suggestion:model",
-        model: modelId,
-        usage: result.usage,
-      }).catch(() => undefined);
-    } else if (hasUnlimitedEditorAi(plan)) {
-      const result = await generate();
-      modelOutput = result.text;
-      await recordIncludedModelTask({
-        userId: user.id,
-        reason: "sentence_suggestion:model",
-        model: modelId,
-        usage: result.usage,
-      }).catch((error) => console.error("[sentence-suggestion] included usage recording failed", error));
-    } else {
-      modelOutput = await runMeteredModelTask({
-        userId: user.id,
-        reason: "sentence_suggestion:model",
-        role: "lite",
-        model: modelId,
-        executionClass: "economy",
-        run: async () => {
-          const result = await generate();
-          return { value: result.text, usage: result.usage };
-        },
-      });
-    }
+    modelOutput = (await generate()).text;
   } catch (error) {
-    if (error instanceof InsufficientCreditsError) {
-      return { error: "You’ve reached your usage limit. Top up or wait for your refresh to continue." };
-    }
     console.error("[sentence-suggestion] generation failed", error);
     return { error: "Sentence generation failed. Try again in a moment." };
   }
@@ -506,5 +451,5 @@ export async function generateSentenceSuggestion(input: unknown): Promise<Senten
     }
   }
 
-  return { sentence, modelSource, citationKey, pendingItem, pendingEntries: pendingEntries.length ? pendingEntries : undefined };
+  return { sentence, modelSource: "system" as const, citationKey, pendingItem, pendingEntries: pendingEntries.length ? pendingEntries : undefined };
 }

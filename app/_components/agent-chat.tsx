@@ -7,7 +7,6 @@ import type {
 import { useEveAgent } from "eve/react";
 import {
   AlertCircleIcon,
-  Coins,
   Pencil,
 } from "lucide-react";
 import {
@@ -46,10 +45,8 @@ import { isUntitledDraftPath, untitledDraftTabLabel } from "@/lib/untitled-draft
 import { rememberWorkspaceEntries } from "@/lib/workspace-entry-index";
 import { cn } from "@/lib/utils";
 import { resizeImageForAgent } from "@/lib/client-image-resize";
-import { isStorageLimitError } from "@/lib/storage-errors";
 import { SYSTEM_SKILL_SUMMARIES } from "@/lib/skill-markdown";
-import type { CreditSummary, ExecutionClass } from "@/lib/credits";
-import type { SuggestedPrompt } from "@/lib/demo-project-config";
+type SuggestedPrompt = { label: string; prompt: string };
 import { listAllFiles, type FileEntry } from "@/app/[projectId]/file-actions";
 import { uploadWorkspaceFile } from "@/lib/workspace-upload";
 import { listSkills, type SkillSummary } from "@/app/[projectId]/skill-actions";
@@ -83,31 +80,19 @@ export function AgentChat({
   sessionId,
   initialState,
   initialEvents,
-  initialCredits,
-  creditExecutionClass,
-  reservationAmount,
   toolCallVerbosity = "full",
   reasoningVerbosity = "full",
   suggestedPrompts,
   includeSystemSkills = false,
-  modelSource = "system",
-  modelId,
-  modelContextWindowTokens,
 }: {
   projectId?: string;
   sessionId?: string;
   initialState?: ClientSessionState;
   initialEvents?: readonly MessageStreamEvent[];
-  initialCredits: CreditSummary;
-  creditExecutionClass: ExecutionClass;
-  reservationAmount: number;
   toolCallVerbosity?: ToolCallVerbosity;
   reasoningVerbosity?: ReasoningVerbosity;
   suggestedPrompts?: readonly SuggestedPrompt[];
   includeSystemSkills?: boolean;
-  modelSource?: "system" | "byok";
-  modelId?: string;
-  modelContextWindowTokens?: number;
 }) {
   // Seed events for instant render: the in-memory transition cache for a
   // same-session navigation, else the persisted event snapshot. Whatever
@@ -157,18 +142,12 @@ export function AgentChat({
       historyEvents={historyEvents}
       key={resetCount}
       initialState={initialState}
-      initialCredits={initialCredits}
-      creditExecutionClass={creditExecutionClass}
-      reservationAmount={reservationAmount}
       projectId={projectId}
       sessionId={sessionId}
       toolCallVerbosity={toolCallVerbosity}
       reasoningVerbosity={reasoningVerbosity}
       suggestedPrompts={suggestedPrompts}
       includeSystemSkills={includeSystemSkills}
-      modelSource={modelSource}
-      modelId={modelId}
-      modelContextWindowTokens={modelContextWindowTokens}
     />
   );
 }
@@ -176,33 +155,21 @@ export function AgentChat({
 function AgentChatInner({
   historyEvents,
   initialState,
-  initialCredits,
-  creditExecutionClass,
-  reservationAmount,
   projectId,
   sessionId,
   toolCallVerbosity,
   reasoningVerbosity,
   suggestedPrompts,
   includeSystemSkills,
-  modelSource,
-  modelId,
-  modelContextWindowTokens,
 }: {
   historyEvents: readonly MessageStreamEvent[];
   initialState?: ClientSessionState;
-  initialCredits: CreditSummary;
-  creditExecutionClass: ExecutionClass;
-  reservationAmount: number;
   projectId?: string;
   sessionId?: string;
   toolCallVerbosity: ToolCallVerbosity;
   reasoningVerbosity: ReasoningVerbosity;
   suggestedPrompts?: readonly SuggestedPrompt[];
   includeSystemSkills: boolean;
-  modelSource: "system" | "byok";
-  modelId?: string;
-  modelContextWindowTokens?: number;
 }) {
   const workspace = useWorkspaceContext();
   const eventLogRef = useRef<MessageStreamEvent[]>([...historyEvents]);
@@ -227,31 +194,6 @@ function AgentChatInner({
     latestStreamError(historyEvents),
   );
   const [cancellationState, setCancellationState] = useState<CancellationState>("idle");
-  const [credits, setCredits] = useState(initialCredits);
-  const usesByok = modelSource === "byok";
-  const modelHeaders = usesByok ? {
-    "x-beeblio-model-source": "byok",
-    ...(modelId ? { "x-beeblio-model-id": modelId } : {}),
-    ...(modelContextWindowTokens ? { "x-beeblio-model-context-window-tokens": String(modelContextWindowTokens) } : {}),
-  } : {};
-
-  const refreshCredits = useCallback(async () => {
-    try {
-      const response = await fetch("/api/credits?summaryOnly=1", { cache: "no-store" });
-      if (!response.ok) return;
-      const data = await response.json() as { summary?: CreditSummary };
-      if (data.summary) setCredits(data.summary);
-    } catch {
-      // Keep the last confirmed value when the non-critical refresh fails.
-    }
-  }, []);
-
-  useEffect(() => {
-    const refresh = () => void refreshCredits();
-    window.addEventListener("beeblio:credits-changed", refresh);
-    return () => window.removeEventListener("beeblio:credits-changed", refresh);
-  }, [refreshCredits]);
-
   const persistCurrentSessionState = useCallback(
     (cursor: ClientSessionState | undefined, force = false) => {
       const appSessionId = sessionId ?? persistedSessionIdRef.current;
@@ -433,7 +375,7 @@ function AgentChatInner({
   const agent = useEveAgent({
     host: "",
     // Tag every request with the project slug so direct GCS tools and
-    // disposable Blaxel Jobs resolve the correct project workspace.
+    // the local sandbox resolves the correct project folder.
     headers: projectId ? { "x-project-slug": projectId } : undefined,
     // Seed the hook with the cached/snapshotted history so resumed sessions
     // render their past messages instantly. `resume` replays the durable
@@ -469,9 +411,8 @@ function AgentChatInner({
     const isBusyNow = agent.status === "submitted" || agent.status === "streaming";
     if (wasBusy && !isBusyNow) {
       window.dispatchEvent(new CustomEvent("beeblio:workspace-changed"));
-      void refreshCredits();
     }
-  }, [agent.status, refreshCredits]);
+  }, [agent.status]);
 
   // A cancellation is fulfilled once the stream delivers the turn's terminal
   // events and the status leaves the busy states; the lingering cancellation
@@ -517,10 +458,8 @@ function AgentChatInner({
   const isBusy = agent.status === "submitted" || agent.status === "streaming";
   const isResuming = agent.status === "resuming";
   const isEmpty = agent.data.messages.length === 0;
-  const insufficientCredits = errorStatus(agent.error) === 402;
   const errorMessage = cancellationError ?? streamError ?? agent.error?.message;
   // The storage turn gate also answers 402; distinguish it from credit shortage.
-  const storageFull = insufficientCredits && isStorageLimitError(errorMessage);
   // The composer's status prop speaks the AI SDK ChatStatus vocabulary, which
   // has no "resuming"; show the spinner for it and rely on submitDisabled.
   const submitStatus = isBusy && cancellationState !== "idle" || isResuming
@@ -979,9 +918,7 @@ function AgentChatInner({
       await agent.send(serializedMessage, {
         headers: {
           "x-beeblio-request-id": requestId,
-          "x-beeblio-execution-class": creditExecutionClass,
-          ...(sessionId ? {} : { "x-beeblio-app-session-id": appSessionId ?? "" }),
-          ...modelHeaders,
+                    ...(sessionId ? {} : { "x-beeblio-app-session-id": appSessionId ?? "" }),
         },
         signal: turnAbortRef.current?.signal,
       });
@@ -993,7 +930,6 @@ function AgentChatInner({
       setMentionedFiles(submittedMentions);
       setMentionedSkills(submittedSkills);
       setAttachedSelections(submittedSelections);
-      void refreshCredits();
       throw error;
     }
   };
@@ -1083,12 +1019,8 @@ function AgentChatInner({
           <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm">
             <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
             <div>
-              <p className="font-medium">{storageFull ? "Workspace storage full" : insufficientCredits ? "More usage needed" : "Request failed"}</p>
-              <p className="mt-0.5 text-muted-foreground">
-                {insufficientCredits && !storageFull && credits.balance < 0
-                  ? "Your last task used more than your remaining usage. A top-up covers it and gets you moving again."
-                  : errorMessage}
-              </p>
+              <p className="font-medium">Request failed</p>
+              <p className="mt-0.5 text-muted-foreground">{errorMessage}</p>
             </div>
           </div>
         </div>
@@ -1115,7 +1047,7 @@ function AgentChatInner({
                     size="sm"
                     variant="outline"
                     className="h-auto min-h-8 whitespace-normal rounded-full px-3 py-1.5 text-left text-[11px] leading-4"
-                    disabled={isBusy || isResuming || isUploading || (!usesByok && credits.enabled && credits.spendable < reservationAmount)}
+                    disabled={isBusy || isResuming || isUploading}
                     onClick={() => void handleSubmit({ text: suggestion.prompt, files: [] })}
                   >
                     {suggestion.label}
@@ -1145,40 +1077,16 @@ function AgentChatInner({
             return agent.respond(inputResponses, {
               headers: {
                 "x-beeblio-request-id": crypto.randomUUID(),
-                "x-beeblio-execution-class": creditExecutionClass,
-                ...modelHeaders,
-              },
+                                    },
               signal: turnAbortRef.current?.signal,
             }).catch((error) => {
-              void refreshCredits();
-              throw error;
+                      throw error;
             });
           }}
         />
       )}
 
       <div className="w-full shrink-0 bg-background/95 p-2 backdrop-blur-sm sm:px-2 sm:pb-2">
-        {credits.enabled && (
-          credits.warningLevel === "warning" ||
-          credits.warningLevel === "urgent" ||
-          credits.warningLevel === "blocked" ||
-          credits.warningLevel === "empty"
-        ) ? (
-          <div className="mb-2 flex items-center justify-between gap-3 px-1 text-[10px]">
-            <span className={cn(
-              "inline-flex items-center gap-1 font-medium text-foreground",
-              credits.warningLevel === "warning" && "text-amber-700 dark:text-amber-300",
-              (
-                credits.warningLevel === "urgent" ||
-                credits.warningLevel === "blocked" ||
-                credits.warningLevel === "empty"
-              ) && "text-destructive",
-            )}>
-              <Coins className="size-3" />
-              {creditWarningLabel(credits)}
-            </span>
-          </div>
-        ) : null}
         <AgentChatComposer
           draft={draft}
           draftInputRef={draftInputRef}
@@ -1199,7 +1107,7 @@ function AgentChatInner({
           hasWorkspaceSelection={Boolean(workspace.selection)}
           selectionShortcutLabel={selectionShortcutLabel}
           submitStatus={submitStatus}
-          submitDisabled={isUploading || isResuming || (!usesByok && credits.enabled && credits.spendable < reservationAmount)}
+          submitDisabled={isUploading || isResuming}
           onSubmit={handleSubmit}
           onStop={requestCancellation}
           onUpload={handleUpload}
@@ -1222,14 +1130,6 @@ function AgentChatInner({
 
     </main>
   );
-}
-
-function creditWarningLabel(credits: CreditSummary) {
-  if (credits.balance < 0) return "Usage Overdrawn";
-  if (credits.warningLevel === "empty") return "No Usage Remaining";
-  if (credits.warningLevel === "blocked") return "More Usage Needed";
-  if (credits.warningLevel === "urgent") return "Usage Very Low";
-  return "Usage Running Low";
 }
 
 function useStalledEvent(

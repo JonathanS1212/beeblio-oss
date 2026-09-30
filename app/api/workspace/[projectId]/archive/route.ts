@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 import { getUser } from "@/lib/auth/session";
 import { archiveWorkspacePaths } from "@/lib/workspace-archive";
-import { AgentWorkspaceError, createWorkspaceReadTicket } from "@/lib/workspace-gcs";
+import { AgentWorkspaceError, createWorkspaceReadTicket } from "@/lib/workspace-files";
 
 type ArchiveItem = { path: string; isDir: boolean };
 

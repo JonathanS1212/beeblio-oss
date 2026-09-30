@@ -8,7 +8,7 @@ import {
   createAgentWorkspaceDirectory,
   listAgentWorkspaceFiles,
   writeAgentWorkspaceFile,
-} from "@/lib/workspace-gcs";
+} from "@/lib/workspace-files";
 
 export const RESEARCH_WORKSPACE_TEMPLATE_VERSION = 6;
 

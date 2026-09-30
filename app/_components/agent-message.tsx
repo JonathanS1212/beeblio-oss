@@ -322,11 +322,7 @@ function DynamicToolPart({
   const toolState = isLive
     ? isPartial ? "input-available" : part.state
     : isPartial ? "stopped" : settledToolState(part.state);
-  // A queued snapshot can remain the latest event after Blaxel has started the
-  // job, so avoid claiming to know its current phase until the final result.
-  const statusLabel = isPartial && isLive && part.toolName === "run_analysis"
-    ? "Processing"
-    : undefined;
+  const statusLabel = undefined;
   const lifecycleLabel = label;
 
   if (toolCallVerbosity === "compact" && inputRequest && part.toolName === "ask_question") {

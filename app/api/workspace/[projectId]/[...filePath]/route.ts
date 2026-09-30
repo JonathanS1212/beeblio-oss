@@ -9,7 +9,7 @@ import {
   createWorkspaceReadTicket,
   getWorkspaceFileFingerprint,
   AgentWorkspaceError,
-} from "@/lib/workspace-gcs";
+} from "@/lib/workspace-files";
 
 async function resolveFileRequest(
   request: Request,
@@ -70,7 +70,7 @@ async function resolveFileRequest(
       disposition: download === "file" ? "attachment" : "inline",
       filename: safeFilename,
     });
-    return NextResponse.redirect(ticket.url, 307);
+    return NextResponse.redirect(new URL(ticket.url, request.url), 307);
   } catch (error) {
     if (error instanceof AgentWorkspaceError) {
       return new NextResponse(error.message, { status: error.status });

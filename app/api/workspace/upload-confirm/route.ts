@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { getUser } from "@/lib/auth/session";
-import { statWorkspaceFile, WorkspaceFileError } from "@/lib/workspace-gcs";
+import { statWorkspaceFile, WorkspaceFileError } from "@/lib/workspace-files";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

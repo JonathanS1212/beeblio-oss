@@ -11,7 +11,7 @@ import {
   createWorkspaceUploadTicket,
   listWorkspaceFiles,
   WorkspaceFileError,
-} from "@/lib/workspace-gcs";
+} from "@/lib/workspace-files";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

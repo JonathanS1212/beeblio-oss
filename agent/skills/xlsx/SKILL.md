@@ -5,7 +5,7 @@ description: "Use this skill any time a spreadsheet file is the primary input or
 
 # XLSX — Scene-Driven Spreadsheet Workbench
 
-> **Beeblio Job runtime:** execute every command in this skill with `run_analysis`. Every dependency this skill mentions (Python `openpyxl`, `xlsxwriter`, pandas; LibreOffice; Noto CJK fonts) is preinstalled in the disposable Job image — never run `pip install`, `npm install`, or `apt` (Jobs have no network). Resolve `<skill_directory>` as `/opt/beeblio-skills/xlsx`. For read-only questions about a workbook, the `read_office` tool is a lighter alternative.
+> **Local runtime:** execute commands with `bash` on the user's computer. Install missing tools locally if needed. Resolve `<skill_directory>` as `$BEEBLIO_SKILLS_DIR/xlsx`. For read-only questions about a workbook, `read_office` is a lighter alternative.
 
 ## Pre-Flight: Intent Gate
 

@@ -1,11 +1,6 @@
-import {
-  DEMO_MAIN_DOCUMENT_PATH,
-  isDemoProjectSlug,
-} from "@/lib/demo-project-config";
 import { PROJECT_BIBLIOGRAPHY_PATH } from "@/lib/project-bibliography";
-import type { WorkspaceRootTree } from "@/lib/workspace-gcs";
+import type { WorkspaceRootTree } from "@/lib/workspace-files";
 import { CITATION_STYLES, type CitationStyle } from "@/lib/citations";
-import { DEFAULT_OPENROUTER_PREFERENCE, type OpenRouterPreference } from "@/lib/openrouter-byok-types";
 
 /**
  * Per-project user preferences, stored in projects.settings (jsonb). The
@@ -24,8 +19,6 @@ export type ProjectSettings = {
   completion?: CompletionSettings;
   /** Show the agent's built-in skills in the chat slash-mention menu. */
   includeSystemSkills: boolean;
-  /** Default for newly-created conversations and direct editor AI tasks. Never contains a key. */
-  openRouter: OpenRouterPreference;
 };
 
 export const DOCUMENT_FONT_FAMILIES = [
@@ -196,13 +189,11 @@ export function parseProjectSettings(value: unknown): ProjectSettings {
       documentDefaults: DEFAULT_DOCUMENT_SETTINGS,
       completion: parseCompletionSettings(undefined),
       includeSystemSkills: false,
-      openRouter: DEFAULT_OPENROUTER_PREFERENCE,
     };
   }
   const source = value as Record<string, unknown>;
   const documentDefaults = record(source.documentDefaults);
   const defaultOpenFile = typeof source.defaultOpenFile === "string" ? source.defaultOpenFile.trim() : "";
-  const openRouter = record(source.openRouter);
   return {
     ...(defaultOpenFile ? { defaultOpenFile } : {}),
     documentDefaults: {
@@ -214,15 +205,6 @@ export function parseProjectSettings(value: unknown): ProjectSettings {
     includeSystemSkills: typeof source.includeSystemSkills === "boolean"
       ? source.includeSystemSkills
       : false,
-    openRouter: {
-      enabled: typeof openRouter.enabled === "boolean" ? openRouter.enabled : false,
-      modelId: typeof openRouter.modelId === "string" && openRouter.modelId.trim()
-        ? openRouter.modelId.trim()
-        : DEFAULT_OPENROUTER_PREFERENCE.modelId,
-      contextLength: typeof openRouter.contextLength === "number" && Number.isSafeInteger(openRouter.contextLength)
-        ? Math.max(8_192, openRouter.contextLength)
-        : DEFAULT_OPENROUTER_PREFERENCE.contextLength,
-    },
   };
 }
 
@@ -251,10 +233,6 @@ export function resolveDefaultOpenFile(input: {
   settings: ProjectSettings;
   rootTree: WorkspaceRootTree;
 }): string | undefined {
-  const candidate =
-    input.settings.defaultOpenFile ??
-    (isDemoProjectSlug(input.projectId)
-      ? DEMO_MAIN_DOCUMENT_PATH
-      : DEFAULT_OPEN_FILE_PATH);
+  const candidate = input.settings.defaultOpenFile ?? DEFAULT_OPEN_FILE_PATH;
   return fileExistsInRootTree(input.rootTree, candidate) ? candidate : undefined;
 }

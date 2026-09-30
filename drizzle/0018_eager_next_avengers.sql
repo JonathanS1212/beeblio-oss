@@ -1,1 +1,0 @@
-ALTER TABLE "app"."agent_sessions" ADD COLUMN "events" jsonb;

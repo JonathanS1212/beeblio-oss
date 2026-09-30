@@ -42,7 +42,7 @@ locations"):
 
 1. Read the matrix to list the studies and their citation keys and DOIs.
 2. For each study, in order of reliability:
-   - Extract the saved paper's text with `pdftotext` through `run_analysis` when a PDF exists in `/workspace/1-References/`.
+   - Extract the saved paper's text with `pdftotext` through `bash` when a PDF exists in `/workspace/1-References/`.
    - `get_paper_details` (by DOI or title) for structured metadata and the abstract.
    - `search_literature` with the exact title, then `web_fetch` the publisher page.
 3. Write all cells for the column in one `set_cells` batch.

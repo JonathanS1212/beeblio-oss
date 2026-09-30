@@ -50,7 +50,7 @@ export function isExcalidrawPath(filePath: string): boolean {
 }
 
 export default defineTool({
-  description: `Write a complete text file directly to durable GCS storage without starting the sandbox.
+  description: `Write a complete text file directly to the linked project folder without running a shell command.
 
 Project path behavior:
 - Relative file paths are resolved automatically from /workspace.

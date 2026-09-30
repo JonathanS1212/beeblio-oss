@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { UserMenu } from "@/app/_components/user-menu";
 import { ForceLightTheme } from "@/app/_components/force-light-theme";
 import { requireUser } from "@/lib/auth/session";
-import { isDemoProjectSlug } from "@/lib/demo-project-config";
 import {
   parseProjectSettings,
   resolveDefaultOpenFile,
@@ -69,7 +68,7 @@ export default async function ProjectLayout({
       // panel's own fetch instead of failing the whole layout.
       listAgentSkills(user.id).catch(() => undefined),
     ]);
-  if (!project && !isDemoProjectSlug(projectId)) {
+  if (!project) {
     redirect("/workspace");
   }
   

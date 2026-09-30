@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { parseBibtexEntries } from "@/lib/bibtex";
 import { lookupLiteratureWork } from "@/lib/literature/search";
-import { readAgentWorkspaceFile, writeAgentWorkspaceFile } from "@/lib/workspace-gcs";
+import { readAgentWorkspaceFile, writeAgentWorkspaceFile } from "@/lib/workspace-files";
 import { getOwnedProject } from "./actions";
 
 const CACHE_VERSION = 1;

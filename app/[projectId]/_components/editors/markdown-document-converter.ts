@@ -1,6 +1,6 @@
 import { extractMermaidBlocks } from "@/lib/document-export/markdown-preprocess";
 
-export type MarkdownDownloadFormat = "pdf" | "docx" | "docx-live" | "docx-mendeley" | "latex" | "markdown";
+export type MarkdownDownloadFormat = "docx" | "docx-live" | "docx-mendeley" | "latex" | "markdown";
 
 export type MarkdownDocumentDownload = {
   format: MarkdownDownloadFormat;
@@ -202,7 +202,7 @@ export async function downloadMarkdownDocument({
   // VS Code render them natively), so it pre-renders no diagram assets.
   const diagrams = format === "markdown"
     ? []
-    : await renderDiagramAssets(markdown, format === "pdf" ? "svg" : "png");
+    : await renderDiagramAssets(markdown, "png");
   const response = await fetch(`/api/convert/${encodeURIComponent(projectId)}`, {
     method: "POST",
     headers: { "content-type": "application/json" },

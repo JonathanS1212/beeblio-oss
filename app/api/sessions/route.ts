@@ -5,9 +5,6 @@ import { db } from "@/db";
 import { agentSessions, projects } from "@/db/schema";
 import { getUser } from "@/lib/auth/session";
 import { generateConversationTitle } from "@/lib/conversation-title";
-import { getUserPlan } from "@/lib/entitlements/user";
-import { getOpenRouterCredential } from "@/lib/openrouter-credential";
-import { parseProjectSettings } from "@/lib/project-settings";
 
 /** Create a session for a project owned by the current user (lazy, on first message). */
 export async function POST(req: Request) {
@@ -19,13 +16,6 @@ export async function POST(req: Request) {
     where: and(eq(projects.slug, projectSlug), eq(projects.userId, user.id)),
   });
   if (!proj) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const preference = parseProjectSettings(proj.settings).openRouter;
-  const useByok = preference.enabled;
-  if (useByok) {
-    const [plan, credential] = await Promise.all([getUserPlan(user.id), getOpenRouterCredential(user.id)]);
-    if (plan === "free" || !credential) return NextResponse.json({ error: "BYOK is unavailable." }, { status: 403 });
-  }
-
   // The app-level row must exist before the Eve turn starts so the conversation
   // remains reachable if the user navigates away while the first turn is still
   // running. Generate the nicer title after returning the row id; title
@@ -34,7 +24,7 @@ export async function POST(req: Request) {
 
   const [newSession] = await db
     .insert(agentSessions)
-    .values({ projectId: proj.id, title: initialTitle, state, eveSessionId: state?.sessionId, modelSource: useByok ? "byok" : "system", modelId: useByok ? preference.modelId : null, modelContextWindowTokens: useByok ? preference.contextLength : null })
+    .values({ projectId: proj.id, title: initialTitle, state, eveSessionId: state?.sessionId })
     .returning();
 
   after(async () => {

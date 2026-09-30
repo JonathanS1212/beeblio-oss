@@ -1,3 +1,5 @@
+import { localAgentSecret } from "../lib/local-secret";
+
 import {
   extractBearerToken,
   verifyJwtHmac,
@@ -7,8 +9,7 @@ import {
 
 export const proxyUserAuth: AuthFn<Request> = withAuthChallenges(
   async (request: Request) => {
-    const secret = process.env.EVE_AUTH_SECRET;
-    if (!secret) return null;
+    const secret = localAgentSecret();
 
     const token = extractBearerToken(request.headers.get("authorization"));
     const result = await verifyJwtHmac(token, {

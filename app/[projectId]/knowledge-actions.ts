@@ -5,8 +5,6 @@ import { after } from "next/server";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
-import { getKnowledgeQueryRate, InsufficientCreditsError } from "@/lib/credits";
-import { runMeteredModelTask } from "@/lib/credits/metered-model-task";
 import {
   listKnowledge,
   processKnowledgeDocument,
@@ -43,23 +41,5 @@ export async function removeFileFromKnowledge(projectId: string, documentId: str
 export async function searchKnowledge(projectId: string, rawQuery: string) {
   const user = await requireUser();
   const query = knowledgeQuerySchema.parse(rawQuery);
-  try {
-    const outcome = await runMeteredModelTask({
-      userId: user.id,
-      reason: "knowledge_search:model",
-      rate: getKnowledgeQueryRate(),
-      category: "knowledge",
-      executionClass: "economy",
-      run: async () => {
-        const { result, usage } = await searchProjectKnowledge(user.id, projectId, query);
-        return { value: result, usage };
-      },
-    });
-    return outcome;
-  } catch (error) {
-    if (error instanceof InsufficientCreditsError) {
-      throw new Error("You’ve reached your usage limit. Top up or wait for your refresh to search Knowledge.");
-    }
-    throw error;
-  }
+  return (await searchProjectKnowledge(user.id, projectId, query)).result;
 }

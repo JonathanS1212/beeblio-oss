@@ -1,16 +1,16 @@
 ---
 name: pdf
-description: "Work with PDF files in disposable Blaxel Jobs: extract text, tables, metadata, and page images; OCR scanned documents; merge, split, and reorganize pages; and produce PDF charts and analysis exports. Use for any task whose primary input or output is a PDF."
+description: "Work with PDF files on the local computer: extract text, tables, metadata, and page images; OCR scanned documents; merge, split, and reorganize pages; and produce PDF charts and analysis exports. Use for any task whose primary input or output is a PDF."
 ---
 
 # PDF processing
 
-Handle PDFs through `run_analysis` in disposable Blaxel Jobs. All tools below are preinstalled — never run `pip install`, `npm install`, or `apt` (Jobs have no network).
+Handle PDFs through `bash` on the local computer. Install any missing utilities locally.
 
 ## Reading and extraction
 
 - **Poppler** for text (`pdftotext -layout`), metadata (`pdfinfo`), and page images (`pdftoppm -png -r 150`). Page images feed visual inspection and OCR.
-- **Baked Python PDF libraries** for tables and custom processing: `pdfplumber` for table extraction and layout-aware text, `PyMuPDF` (fitz) for fast programmatic page manipulation, and `pypdf` for split/merge/rotate/metadata operations. `pandas.read_pdf`-style workflows should go through pdfplumber instead of retyping rows.
+- **Python PDF libraries** for tables and custom processing: `pdfplumber` for table extraction and layout-aware text, `PyMuPDF` (fitz) for fast programmatic page manipulation, and `pypdf` for split/merge/rotate/metadata operations. `pandas.read_pdf`-style workflows should go through pdfplumber instead of retyping rows.
 - **Tesseract** (`tesseract page.png out`) for scanned or image-only documents; rasterize the needed pages with `pdftoppm` first. Note OCR quality limits in the reply when the source is degraded.
 
 Prefer `pdftotext` for plain text questions; reach for pdfplumber only when structure (tables, columns, coordinates) matters. For long PDFs, extract page ranges rather than the whole file, and cite evidence by page number.
@@ -22,7 +22,7 @@ Merge, split, extract, and rotate with `pypdf` from a saved script under `/works
 ## Producing PDFs
 
 - **Charts and figures**: a saved Matplotlib or Seaborn script written as PDF (or PNG/SVG) under `/workspace/3-Analysis`, following `data-visualization-styling`.
-- **Documents**: author or reuse a Markdown source and export it through `convert_markdown_document` — it routes the visual editor's conversion pipeline (including Zotero-aware citations) and renders ```mermaid fences server-side, so it is more faithful than rebuilding a PDF by hand. The Job image has no Chromium/LaTeX/ReportLab: do not attempt HTML-to-PDF rendering or LaTeX compilation there.
+- **Documents**: author or reuse a Markdown source and export it through `convert_markdown_document` — it routes the visual editor's conversion pipeline (including Zotero-aware citations) and renders ```mermaid fences server-side, so it is more faithful than rebuilding a PDF by hand. For PDF output, export DOCX and convert it with local software when appropriate.
 - **Office-to-PDF conversion**: LibreOffice (`soffice --headless --convert-to pdf`) is available for converting DOCX/PPTX/XLSX deliverables produced by the `docx`, `pptx`, or `xlsx` skills.
 
 Confirm output files exist before reporting them delivered, and verify page counts (`pdfinfo`) after merge/split operations.

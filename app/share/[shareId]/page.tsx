@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { publicFiles, projects } from "@/db/schema";
 import { getUser } from "@/lib/auth/session";
 import { isFormHtml } from "@/lib/forms/parse";
-import { readAgentWorkspaceFile } from "@/lib/workspace-gcs";
+import { readAgentWorkspaceFile } from "@/lib/workspace-files";
 import { PublicFormView } from "./_components/public-form-view";
 import { SharedFileViewer } from "./_components/shared-file-viewer";
 

@@ -5,7 +5,7 @@ description: "Complete DOCX document creation, editing, and analysis capabilitie
 
 # DOCX Creation, Editing, and Analysis
 
-> **Beeblio Job runtime:** execute every command in this skill with `run_analysis`. Every dependency this skill mentions (Node `docx` and `image-size`, Python `defusedxml`/`python-docx`, pandoc, LibreOffice, Poppler) is preinstalled in the disposable Job image — never run `npm install`, `pip install`, or `apt` (Jobs have no network). Resolve `<skill_directory>` as `/opt/beeblio-skills/docx`. For read-only questions about a Word file, the `read_office` tool is a lighter alternative to this skill's Read route. To export an existing Markdown workspace file to DOCX or PDF (Mermaid fences render automatically), prefer the `convert_markdown_document` tool over rebuilding the document with this skill.
+> **Local runtime:** execute commands with `bash` on the user's computer. Install missing tools locally if needed. Resolve `<skill_directory>` as `$BEEBLIO_SKILLS_DIR/docx`. For read-only questions about a Word file, `read_office` is a lighter alternative. To export an existing Markdown workspace file to DOCX, prefer `convert_markdown_document`.
 
 ## Overview
 
@@ -185,7 +185,7 @@ See `references/chart-templates.md`.
 
 ## Dependencies
 
-All preinstalled in the Beeblio agent image (global `require('docx')` resolves via `NODE_PATH`):
+Available when installed in the local environment (global `require('docx')` resolves via `NODE_PATH`):
 
 - **pandoc**: Text extraction
 - **docx** (npm): Document creation

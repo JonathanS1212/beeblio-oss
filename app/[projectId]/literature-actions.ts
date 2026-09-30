@@ -35,7 +35,7 @@ import {
   readAgentWorkspaceFile,
   readAgentWorkspaceTextOrNull,
   writeAgentWorkspaceFile,
-} from "@/lib/workspace-gcs";
+} from "@/lib/workspace-files";
 import { getOwnedProject } from "./actions";
 
 const searchInputSchema = z.object({

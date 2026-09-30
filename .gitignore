@@ -3,6 +3,7 @@ node_modules
 .env*
 !.env.example
 .eve
+.beeblio
 local-files
 local-s3
 .vercel
@@ -44,3 +45,5 @@ docs/skills
 spike/gotenberg-out
 
 .gcs-sa-key.json
+
+__pycache__

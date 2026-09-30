@@ -7,7 +7,7 @@ description: Guidelines for processing multimedia files like audio and video.
 When tasked with processing multimedia files (e.g., video to audio extraction, audio transcription):
 
 ## Native FFmpeg
-*   The Blaxel Job image contains native `ffmpeg` and `ffprobe`. Use them through `run_analysis` for probing, clipping, transcoding, normalization, thumbnails, frame extraction, waveforms, and other deterministic local processing.
+*   Use locally installed `ffmpeg` and `ffprobe`. Use them through `bash` for probing, clipping, transcoding, normalization, thumbnails, frame extraction, waveforms, and other deterministic local processing.
 *   Use `-nostdin`, an explicit log level, bounded timeouts, quoted workspace paths, and a new output path. Probe inputs first and verify the resulting duration, streams, dimensions, and file size.
 
 ## Media Tools
@@ -16,4 +16,4 @@ When tasked with processing multimedia files (e.g., video to audio extraction, a
 
 ## Transcription & Analysis
 *   Use the `transcribe_audio` tool to transcribe extracted audio files.
-*   Once you have the text transcript, proceed with thematic or qualitative analysis using standard string parsing or NLP libraries through `run_analysis`.
+*   Once you have the text transcript, proceed with thematic or qualitative analysis using standard string parsing or NLP libraries through `bash`.

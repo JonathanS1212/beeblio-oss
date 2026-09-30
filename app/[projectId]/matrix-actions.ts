@@ -29,7 +29,7 @@ import {
   listAgentWorkspaceFiles,
   readAgentWorkspaceTextOrNull,
   writeAgentWorkspaceFile,
-} from "@/lib/workspace-gcs";
+} from "@/lib/workspace-files";
 import { getOwnedProject } from "./actions";
 
 const projectIdSchema = z.string().regex(/^[A-Za-z0-9_-]+$/);

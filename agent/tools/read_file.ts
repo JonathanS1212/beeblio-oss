@@ -28,7 +28,7 @@ const readFileOutputSchema = z
   .strict();
 
 export default defineTool({
-  description: `Read a text file from the current project directly from durable GCS storage without starting the sandbox.
+  description: `Read a text file from the current project directly from the linked project folder without running a shell command.
 
 Usage:
 - Relative paths resolve from /workspace and cannot escape it.

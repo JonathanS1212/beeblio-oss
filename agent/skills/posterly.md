@@ -5,7 +5,7 @@ description: Build an academic conference poster as a self-contained HTML/CSS ar
 
 # posterly — HTML/CSS Academic Poster Workflow
 
-Use this skill to design and build an academic research poster as a single HTML file styled for an exact print canvas. The current Blaxel Job image does not include Chromium, so do not promise or simulate a PDF render unless a dedicated rendering tool is available in the active environment.
+Use this skill to design and build an academic research poster as a single HTML file styled for an exact print canvas. Use a locally installed browser renderer for PDF only when available, and inspect its output before claiming print fidelity.
 
 ## Canvas and design constraints
 

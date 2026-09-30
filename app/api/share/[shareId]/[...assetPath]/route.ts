@@ -8,7 +8,7 @@ import {
   readAgentWorkspaceFile,
   createWorkspaceReadTicket,
   AgentWorkspaceError,
-} from "@/lib/workspace-gcs";
+} from "@/lib/workspace-files";
 import { resolveWorkspaceAssetPath } from "@/app/[projectId]/_components/editors/markdown-image-path";
 
 // Serves a public share link: the shared file itself plus exactly the assets
@@ -78,7 +78,7 @@ export async function GET(
       disposition: download ? "attachment" : "inline",
       filename: safeFilename,
     });
-    return NextResponse.redirect(ticket.url, 307);
+    return NextResponse.redirect(new URL(ticket.url, request.url), 307);
   } catch (error) {
     if (error instanceof AgentWorkspaceError) {
       return new NextResponse(error.message, { status: error.status });

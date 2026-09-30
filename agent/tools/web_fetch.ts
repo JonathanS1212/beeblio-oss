@@ -1,12 +1,6 @@
 import { defineTool } from "eve/tools";
 import type { ToolContext } from "eve/tools";
 import { z } from "zod";
-import { getCreditsConfig } from "../../lib/credits/index";
-import {
-  configuredToolCreditDetails,
-  getReservationContext,
-  meterConfiguredToolUsage,
-} from "../lib/credit-meter";
 import { runTinyfish } from "../lib/monid";
 import { compactModelOutput } from "../lib/tool-runtime";
 
@@ -43,30 +37,6 @@ export default defineTool({
       },
       { signal: ctx.abortSignal },
     );
-
-    try {
-      const credit = getReservationContext(ctx);
-      if (credit) {
-        const charge = configuredToolCreditDetails({
-          executionClass: credit.executionClass,
-          category: "search",
-          toolName: ctx.toolName,
-          creditsPerUnit: getCreditsConfig().externalToolCredits.webFetchPerUrl,
-          quantity: input.urls.length,
-          billingUnit: "url",
-        });
-        await meterConfiguredToolUsage({
-          ctx,
-          callId: ctx.callId,
-          idempotencyKey: `tool:${credit.sessionId}:${ctx.callId}:web-fetch`,
-          reason: "tool:web_fetch",
-          chargedCredits: charge.chargedCredits,
-          details: charge.details,
-        });
-      }
-    } catch (error) {
-      console.error("Web fetch credit bookkeeping failed:", error);
-    }
 
     return result;
   },

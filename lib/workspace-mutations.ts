@@ -1,4 +1,4 @@
-import type { WorkspaceFileEntry } from "./workspace-gcs";
+import type { WorkspaceFileEntry } from "./workspace-files";
 
 /**
  * Optimistic workspace mutations. Actions that already know their outcome

@@ -75,7 +75,6 @@ import {
   type OpenWorkspaceFileDetail,
   type OpenWorkspaceFolderDetail,
 } from "@/lib/chat-context";
-import { AGENT_FEATURE_ENABLED } from "@/lib/agent-feature";
 import { OPEN_LITERATURE_SEARCH_EVENT, type OpenLiteratureSearchDetail } from "@/lib/literature/types";
 import { PROJECT_BIBLIOGRAPHY_PATH } from "@/lib/project-bibliography";
 import { WORKSPACE_CHANGED_EVENT, type WorkspaceChangedDetail } from "@/lib/workspace-change";
@@ -129,7 +128,6 @@ interface ProjectLayoutUIProps {
   defaultFilePath?: string;
   /** Server-read text of the default file, seeding the client cache so its first open renders without a round trip. */
   defaultFileContent?: string;
-  creditsMenu?: ReactNode;
   userMenu?: ReactNode;
   storageMeter?: ReactNode;
   children: ReactNode;
@@ -159,7 +157,6 @@ export function ProjectLayoutUI({
   initialSessions,
   defaultFilePath,
   defaultFileContent,
-  creditsMenu,
   userMenu,
   storageMeter,
   children,
@@ -1067,11 +1064,6 @@ export function ProjectLayoutUI({
               </Tooltip>;
             })()}
             <div className={cn("mb-1 w-full border-t border-border/50", isMobile || !railExpanded ? "max-w-6" : "")} aria-hidden="true" />
-            {creditsMenu ? (
-              <div className={cn(isMobile || !railExpanded ? "w-9" : "w-full")}>
-                {creditsMenu}
-              </div>
-            ) : null}
             {userMenu ? (
               <div className={cn(isMobile || !railExpanded ? "w-9" : "w-full")}>
                 {userMenu}

@@ -13,7 +13,7 @@ import {
 /**
  * User-scoped agent skills API. Every route is bounded by the verified
  * principalId (the Neon Auth user id); the browser never supplies a user id.
- * Skills live at gs://<GCS_BUCKET>/<userId>/skills/<slug>/SKILL.md — see
+ * Skills live at .beeblio/skills/<slug>/SKILL.md — see
  * agent/lib/user-skills.ts.
  */
 

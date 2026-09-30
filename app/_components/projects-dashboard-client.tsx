@@ -10,10 +10,6 @@ import { CreateProjectForm } from "./create-project-form";
 import { ProjectCardMenu } from "./project-card-menu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import {
-  demoProjectHref,
-  isDemoProjectSlug,
-} from "@/lib/demo-project-config";
 
 interface WorkspaceProject {
   id: string;
@@ -162,9 +158,7 @@ export function ProjectsDashboardClient({
             {filteredSessions.map((session, index) => (
               <Link
                 key={session.id}
-                href={isDemoProjectSlug(session.projectSlug)
-                  ? demoProjectHref(session.id)
-                  : `/${session.projectSlug}/${session.id}`}
+                href={`/${session.projectSlug}/${session.id}`}
                 className={cn("group flex min-h-28 min-w-0 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card p-3.5 shadow-sm transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/25", index > 0 && !recentTasksOpen && "max-sm:hidden")}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -219,9 +213,6 @@ export function ProjectsDashboardClient({
                 </div>
                 <div className="mt-6 flex min-w-0 items-center gap-2">
                   <CardTitle className="line-clamp-2 min-w-0 flex-1 text-xl font-bold leading-tight tracking-[-0.04em]">{project.name}</CardTitle>
-                  {isDemoProjectSlug(project.slug) ? (
-                    <Badge variant="secondary" className="shrink-0 text-[9px] uppercase tracking-wider">Demo</Badge>
-                  ) : null}
                 </div>
                 {/* <CardDescription className="mt-1.5 truncate font-mono text-[10px] uppercase tracking-[0.08em]">{project.slug}</CardDescription> */}
               </CardHeader>

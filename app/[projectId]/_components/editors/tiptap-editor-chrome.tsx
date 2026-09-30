@@ -528,8 +528,7 @@ export function EquationEditorDialog({
       }
       setLatex(payload.latex);
       if (payload.modelSource === "system") {
-        window.dispatchEvent(new Event("beeblio:credits-changed"));
-      }
+        }
     } catch (error) {
       setAiError(error instanceof Error ? error.message : "The AI could not generate an equation.");
     } finally {

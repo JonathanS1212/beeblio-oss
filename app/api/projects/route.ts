@@ -1,50 +1,24 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { getUser } from "@/lib/auth/session";
-import {
-  provisionResearchWorkspace,
-  RESEARCH_DRAFT_PATH,
-} from "@/lib/research-workspace-template";
 import { nanoid } from "nanoid";
 
 export async function POST(req: Request) {
   try {
     const user = await getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const body = await req.json();
-    const name = body.name as string;
-    const description = typeof body.description === "string" ? body.description : undefined;
-    if (typeof name !== "string" || !name.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
-    }
-
+    const body = await req.json() as { name?: unknown; description?: unknown; folderPath?: unknown };
+    if (typeof body.folderPath !== "string" || !path.isAbsolute(body.folderPath)) return NextResponse.json({ error: "Select an existing project folder" }, { status: 400 });
+    const folderPath = await fs.realpath(body.folderPath);
+    if (!(await fs.stat(folderPath)).isDirectory()) return NextResponse.json({ error: "Project path must be a folder" }, { status: 400 });
+    const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : path.basename(folderPath);
     const slug = nanoid(10);
-
-    const [newProject] = await db
-      .insert(projects)
-      .values({ userId: user.id, name: name.trim(), slug, description: description?.trim() || null })
-      .returning();
-
-    try {
-      await provisionResearchWorkspace({
-        userId: user.id,
-        projectSlug: newProject.slug,
-      });
-    } catch (error) {
-      await db.delete(projects).where(eq(projects.id, newProject.id));
-      throw error;
-    }
-
-    return NextResponse.json({
-      success: true,
-      slug: newProject.slug,
-      destinationUrl: `/${newProject.slug}?file=${encodeURIComponent(RESEARCH_DRAFT_PATH)}`,
-    });
-  } catch (err: unknown) {
-    console.error("API Route Error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const [project] = await db.insert(projects).values({ userId: user.id, name, slug, folderPath, description: typeof body.description === "string" ? body.description.trim() : null }).returning();
+    return NextResponse.json({ success: true, slug: project.slug, destinationUrl: `/${project.slug}` });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not link folder" }, { status: 400 });
   }
 }

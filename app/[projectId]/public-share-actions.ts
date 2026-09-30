@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { publicFiles, projects } from "@/db/schema";
 import { requireUser } from "@/lib/auth/session";
 import { getOwnedProject } from "./actions";
-import { readAgentWorkspaceFile, writeAgentWorkspaceFile, copyAgentWorkspacePath } from "@/lib/workspace-gcs";
+import { readAgentWorkspaceFile, writeAgentWorkspaceFile, copyAgentWorkspacePath } from "@/lib/workspace-files";
 
 export async function copyPublicFile(shareId: string, destinationProjectSlug: string) {
   const user = await requireUser();

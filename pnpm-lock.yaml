@@ -11,9 +11,6 @@ importers:
 
   .:
     dependencies:
-      '@blaxel/core':
-        specifier: 0.3.21
-        version: 0.3.21(@hey-api/openapi-ts@0.99.0(typescript@6.0.3))(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)
       '@codemirror/autocomplete':
         specifier: ^6.20.3
         version: 6.20.3
@@ -35,18 +32,12 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.9
         version: 6.43.9
-      '@daveyplate/better-auth-ui':
-        specifier: 3.3.9
-        version: 3.3.9(c28c48b62b9bc429aa54e91b2f7b1e7d)
       '@excalidraw/excalidraw':
         specifier: ^0.18.1
         version: 0.18.1(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@excalidraw/utils':
         specifier: 0.1.5
         version: 0.1.5
-      '@google-cloud/storage':
-        specifier: ^7.22.0
-        version: 7.22.0(supports-color@7.2.0)
       '@google/genai':
         specifier: ^2.22.0
         version: 2.22.0(@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.4.3))(supports-color@7.2.0)
@@ -56,15 +47,6 @@ importers:
       '@mdgate/ppt':
         specifier: ^0.6.20
         version: 0.6.20
-      '@neondatabase/auth':
-        specifier: 0.4.2-beta
-        version: 0.4.2-beta(3e6d0f5d52e6f953456ecffc9d8880c3)
-      '@neondatabase/auth-ui':
-        specifier: 0.2.1-beta
-        version: 0.2.1-beta(820eff59f34fdb484d40f18baaa9a4d8)
-      '@neondatabase/serverless':
-        specifier: ^1.1.0
-        version: 1.1.0
       '@openrouter/ai-sdk-provider':
         specifier: ^3.0.0
         version: 3.0.0(ai@7.0.100(zod@4.4.3))(zod@4.4.3)
@@ -149,21 +131,15 @@ importers:
       '@tiptap/starter-kit':
         specifier: 3.30.5
         version: 3.30.5
-      '@vercel/analytics':
-        specifier: ^2.0.1
-        version: 2.0.1(next@16.3.0-preview.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(sass@1.51.0))(react@19.2.6)
-      '@vercel/connect':
-        specifier: 0.4.2
-        version: 0.4.2(ai@7.0.100(zod@4.4.3))(better-auth@1.6.25(better-sqlite3@12.11.1)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(better-sqlite3@12.11.1)(kysely@0.28.17))(next@16.3.0-preview.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(sass@1.51.0))(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(eve@0.55.0(ai@7.0.100(zod@4.4.3))(microsandbox@0.7.2))
-      '@vercel/speed-insights':
-        specifier: ^2.0.0
-        version: 2.0.0(next@16.3.0-preview.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(sass@1.51.0))(react@19.2.6)
       ai:
         specifier: ^7.0.93
         version: 7.0.100(zod@4.4.3)
       archiver:
         specifier: 7.0.1
         version: 7.0.1
+      better-sqlite3:
+        specifier: 12.11.1
+        version: 12.11.1
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
@@ -1789,8 +1765,9 @@ packages:
 
   '@next/mdx@16.3.3':
     resolution: {integrity: sha512-DR5rq7bLDntGu49rUBAYOEjDwXsMHJ/Q/qjF+7dxLZwq9RZOVm/YoaVfrf1Mal3zBf3expNVtn8oQp590bt/Gw==}
-    peerDependencies:
-    peerDependenciesMeta:
+    peerDependencies: null
+    peerDependenciesMeta: null
+
   '@next/swc-darwin-arm64@16.3.0-preview.6':
     resolution: {integrity: sha512-cQB2whnW1PD/Q+AxoI2X4LU3af1B+aFxWx+kmAiCCKDyjoO5Nh+9GyNu+nDAbP/WoloohbOWgO8m1U9j1EIZuw==}
     engines: {node: '>= 10'}
@@ -9207,7 +9184,8 @@ snapshots:
   '@next/mdx@16.3.3(@mdx-js/loader@3.1.1(supports-color@7.2.0))(@mdx-js/react@3.1.1(@types/react@19.2.15)(react@19.2.6))':
     dependencies:
       source-map: 0.7.6
-    optionalDependencies:
+    optionalDependencies: null
+
   '@next/swc-darwin-arm64@16.3.0-preview.6':
     optional: true
 

@@ -2,12 +2,6 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import {
-  getReservationContext,
-  meterReservedUsage,
-  modelCostDetails,
-  normalizeAiSdkUsage,
-} from "../lib/credit-meter";
 import { readWorkspaceFile } from "../workspace-files";
 import { timedModelFetch, turnModelDeadline } from "../lib/model-timeout";
 import {
@@ -19,7 +13,7 @@ const defaultMaxImageBytes = 20 * 1024 * 1024;
 
 export default defineTool({
   description:
-    "Semantically analyze a JPEG, PNG, WebP, or GIF with a vision model. Use native Pillow/file/Tesseract through run_analysis first for metadata, resizing, rotation, deterministic preprocessing, or OCR; call this tool when understanding visible content requires model reasoning. It does not modify the file.",
+    "Semantically analyze a JPEG, PNG, WebP, or GIF with a vision model. Use native Pillow/file/Tesseract through bash first for metadata, resizing, rotation, deterministic preprocessing, or OCR; call this tool when understanding visible content requires model reasoning. It does not modify the file.",
   inputSchema: z
     .object({
       imagePath: z
@@ -105,32 +99,6 @@ export default defineTool({
     const analysis = result.text.trim();
     if (!analysis) {
       throw new Error("The vision model returned an empty analysis.");
-    }
-
-    try {
-      const credit = getReservationContext(ctx);
-      if (credit) {
-        const charge = modelCostDetails({
-          role: "vision",
-          usage: normalizeAiSdkUsage(result.usage),
-          executionClass: credit.executionClass,
-          category: "vision",
-          toolName: ctx.toolName,
-          modelOverride: modelId,
-        });
-        await meterReservedUsage({
-          ctx,
-          callId: ctx.callId,
-          idempotencyKey: `tool:${credit.sessionId}:${ctx.callId}:vision`,
-          reason: "tool:vision",
-          chargedCredits: charge.chargedCredits,
-          details: charge.details,
-        });
-      }
-    } catch (error) {
-      // The supplier call succeeded; preserve its useful result and let
-      // reconciliation surface any billing write failure separately.
-      console.error("Vision credit bookkeeping failed:", error);
     }
 
     return { imagePath: resolvedPath, mediaType, analysis };

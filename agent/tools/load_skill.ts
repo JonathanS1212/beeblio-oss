@@ -7,13 +7,12 @@ import { parseSkillMarkdown, readUserSkill } from "../lib/user-skills.ts";
 
 // Eve's built-in static-skill reader resolves skill files through the session
 // sandbox. That is useful when a skill needs its packaged companion files, but
-// it also wakes/provisions the per-user VM for an analysis turn whose actual
-// computation runs in Blaxel Batch. Read this application's own top-level
+// the app can read the same skill directly from local files. Read this application's own top-level
 // skill instructions from the host bundle first. The explicit map is also a
 // path-traversal boundary: model-provided skill names never become paths.
 /**
  * Custom `load_skill` tool that resolves user-authored skills directly from
- * GCS/memory cache without requiring a sandbox filesystem sync, while falling
+ * local files without requiring a sandbox filesystem sync, while falling
  * back to Eve's built-in `load_skill` for static compiled skills.
  */
 export default defineTool({
