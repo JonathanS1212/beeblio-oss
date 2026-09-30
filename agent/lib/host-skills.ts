@@ -5,7 +5,7 @@ const HOST_SKILL_ENTRYPOINTS: Readonly<Record<string, string>> = {
   "bibliometric-analysis": "bibliometric-analysis.md",
   "data-cleaning-heuristics": "data-cleaning-heuristics.md",
   "data-visualization-styling": "data-visualization-styling.md",
-  "docx": "docx/SKILL.md",
+  "docx": "beeblio-docx.md",
   "excalidraw-diagramming": "excalidraw-diagramming.md",
   "interactive-html-artifacts": "interactive-html-artifacts.md",
   "literature-matrix": "literature-matrix.md",
@@ -14,13 +14,13 @@ const HOST_SKILL_ENTRYPOINTS: Readonly<Record<string, string>> = {
   "multimedia-processing": "multimedia-processing.md",
   "pdf": "pdf.md",
   "posterly": "posterly.md",
-  "pptx": "pptx/SKILL.md",
+  "pptx": "beeblio-pptx.md",
   "science-scrollytelling": "science-scrollytelling.md",
   "statistical-interpretation": "statistical-interpretation.md",
   "survey-forms": "survey-forms.md",
   "svg-diagram": "svg-diagram.md",
   "template-presentations": "template-presentations.md",
-  "xlsx": "xlsx/SKILL.md",
+  "xlsx": "beeblio-xlsx.md",
 };
 
 const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;

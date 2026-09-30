@@ -41,6 +41,9 @@ scripts/eval/runs/
 scripts/tmp-*
 
 docs/skills
+agent/skills/docx/
+agent/skills/pptx/
+agent/skills/xlsx/
 .viewer-test
 spike/gotenberg-out
 

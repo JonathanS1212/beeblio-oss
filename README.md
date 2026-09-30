@@ -2,6 +2,12 @@
 
 Beeblio is a local AI research workspace. Its Next.js interface and Eve agent run on your computer, and each project points to an existing folder. Beeblio reads and edits that folder directly; linking a project does not copy or upload its files.
 
+This is an early local-first release. It is intended for a single trusted user on one computer. Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Please report security issues as described in [SECURITY.md](SECURITY.md).
+
+## License
+
+Beeblio is **source available** under the [PolyForm Noncommercial License 1.0.0](LICENSE). Personal and other noncommercial use is permitted; commercial use requires separate permission from the copyright holder. This is not an OSI-approved open-source license. Third-party dependencies retain their own licenses.
+
 ## Requirements
 
 - Node.js 24 and pnpm 11
