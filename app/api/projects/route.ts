@@ -4,6 +4,7 @@ import path from "node:path";
 import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { getUser } from "@/lib/auth/session";
+import { provisionResearchWorkspace } from "@/lib/research-workspace-template";
 import { nanoid } from "nanoid";
 
 export async function POST(req: Request) {
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
     const folderPath = await fs.realpath(body.folderPath);
     if (!(await fs.stat(folderPath)).isDirectory()) return NextResponse.json({ error: "Project path must be a folder" }, { status: 400 });
     const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : path.basename(folderPath);
+    await provisionResearchWorkspace(folderPath);
     const slug = nanoid(10);
     const [project] = await db.insert(projects).values({ userId: user.id, name, slug, folderPath, description: typeof body.description === "string" ? body.description.trim() : null }).returning();
     return NextResponse.json({ success: true, slug: project.slug, destinationUrl: `/${project.slug}` });

@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { integerEnv } from "@/lib/env-config";
 import { LITERATURE_SOURCES } from "@/lib/literature/types";
+import { localAgentSecret } from "@/lib/local-secret";
 
 export const literatureItemSchema = z.object({
   id: z.string().min(1).max(300),
@@ -36,12 +37,6 @@ export type ValidLiteratureItem = z.infer<typeof literatureItemSchema>;
 
 const RESULT_TOKEN_TTL_MS = integerEnv("LITERATURE_RESULT_TOKEN_TTL_SECONDS", 12 * 60 * 60, 60) * 1_000;
 
-function signingSecret() {
-  return process.env.LITERATURE_RESULT_SIGNING_SECRET?.trim() ||
-    process.env.EVE_AUTH_SECRET?.trim() ||
-    process.env.NEON_AUTH_COOKIE_SECRET?.trim();
-}
-
 function signableItem(item: Omit<ValidLiteratureItem, "saveToken">) {
   return {
     id: item.id,
@@ -66,9 +61,7 @@ function signableItem(item: Omit<ValidLiteratureItem, "saveToken">) {
 }
 
 function resultSignature(projectId: string, item: Omit<ValidLiteratureItem, "saveToken">, expiresAt: number) {
-  const secret = signingSecret();
-  if (!secret) throw new Error("Literature result signing is not configured.");
-  return createHmac("sha256", secret)
+  return createHmac("sha256", localAgentSecret())
     .update(JSON.stringify({ projectId, expiresAt, item: signableItem(item) }))
     .digest("base64url");
 }

@@ -216,7 +216,9 @@ export function WorkspaceFileActions({
     const loading = toast.loading(`Adding ${file.name} to Knowledge…`);
     try {
       const result = await addFileToKnowledge(projectId, file.path);
-      if (result.kind === "already_exists") {
+      if (result.kind === "configuration_error") {
+        toast.error("Failed to add to Knowledge", { id: loading, description: result.error });
+      } else if (result.kind === "already_exists") {
         toast.info("Already in Knowledge", { id: loading, description: `${file.name} is already in this project's Knowledge.` });
       } else {
         toast.success(`${file.name} added to Knowledge`, { id: loading, description: "Processing in the background." });

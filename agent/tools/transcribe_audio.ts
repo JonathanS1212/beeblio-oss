@@ -11,7 +11,6 @@ import {
 } from "../workspace-paths";
 
 const defaultMaxAudioBytes = 25 * 1024 * 1024;
-const defaultTranscriptionModelId = "gemini-3.5-transcribe";
 const geminiApiBase = "https://generativelanguage.googleapis.com/v1beta";
 // Base64 inflates bytes by 4/3 and the whole JSON request must stay under the
 // API's 20 MB inline limit; larger audio goes through the Files API instead.
@@ -132,9 +131,10 @@ export default defineTool({
         "GOOGLE_API_KEY is not configured; it is required for transcription",
       );
     }
-    const modelId =
-      process.env.GOOGLE_TRANSCRIPTION_MODEL_ID?.trim() ||
-      defaultTranscriptionModelId;
+    const modelId = process.env.GOOGLE_TRANSCRIPTION_MODEL_ID?.trim();
+    if (!modelId) {
+      throw new Error("GOOGLE_TRANSCRIPTION_MODEL_ID is not configured");
+    }
 
     // Timestamps are needed for subtitle formats even without speaker labels;
     // diarization needs them to build speaker turns. Both features cap audio

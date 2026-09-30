@@ -126,7 +126,7 @@ export const DEFAULT_COMPLETION_SETTINGS: CompletionSettings = {
  */
 export const COMPLETION_SETTINGS_CHANGED_EVENT = "beeblio:completion-settings-changed";
 
-/** The starter draft every project is provisioned with; keep in sync with RESEARCH_DRAFT_PATH. */
+/** Legacy default document; absent in newly linked folders unless the user already has it. */
 export const DEFAULT_OPEN_FILE_PATH = "research-draft.md";
 
 const MARKDOWN_EXTENSIONS = [".md", ".markdown"];

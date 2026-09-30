@@ -1,68 +1,56 @@
-import {
-  PROJECT_BIBLIOGRAPHY_NAME,
-  PROJECT_BIBLIOGRAPHY_PATH,
-  REFERENCES_DIRECTORY,
-} from "@/lib/project-bibliography";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+
+import { createSeedMatrix, DEFAULT_MATRIX_PATH, serializeMatrix } from "@/lib/literature-matrix";
+import { PROJECT_BIBLIOGRAPHY_PATH } from "@/lib/project-bibliography";
 import { RESEARCH_WORKSPACE_DIRECTORIES } from "@/lib/research-workspace";
-import {
-  createAgentWorkspaceDirectory,
-  listAgentWorkspaceFiles,
-  writeAgentWorkspaceFile,
-} from "@/lib/workspace-files";
 
-export const RESEARCH_WORKSPACE_TEMPLATE_VERSION = 6;
-
-// Starter working document at the workspace root. Ordinary user file, not protected.
-export const RESEARCH_DRAFT_NAME = "research-draft.md";
-export const RESEARCH_DRAFT_PATH = RESEARCH_DRAFT_NAME;
-
+export const RESEARCH_WORKSPACE_TEMPLATE_VERSION = 7;
 export { RESEARCH_WORKSPACE_DIRECTORIES } from "@/lib/research-workspace";
 
-/**
- * Adds the standard research structure without moving or replacing user files.
- * Safe to call again when a project-creation request is retried.
- */
-export async function provisionResearchWorkspace(input: {
-  userId: string;
-  projectSlug: string;
-}): Promise<void> {
-  const { userId, projectSlug } = input;
+const canonicalFiles = [
+  { relativePath: PROJECT_BIBLIOGRAPHY_PATH, content: "" },
+  { relativePath: DEFAULT_MATRIX_PATH, content: serializeMatrix(createSeedMatrix()) },
+] as const;
 
-  await Promise.all(
-    RESEARCH_WORKSPACE_DIRECTORIES.map((directory) =>
-      createAgentWorkspaceDirectory(userId, projectSlug, directory),
-    ),
-  );
-
-  await Promise.all([
-    ensureBlankWorkspaceFile(
-      userId,
-      projectSlug,
-      REFERENCES_DIRECTORY,
-      PROJECT_BIBLIOGRAPHY_NAME,
-      PROJECT_BIBLIOGRAPHY_PATH,
-    ),
-    ensureBlankWorkspaceFile(
-      userId,
-      projectSlug,
-      "",
-      RESEARCH_DRAFT_NAME,
-      RESEARCH_DRAFT_PATH,
-    ),
-  ]);
+async function existingEntry(absolutePath: string) {
+  try {
+    return await fs.lstat(absolutePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
 }
 
-async function ensureBlankWorkspaceFile(
-  userId: string,
-  projectSlug: string,
-  directory: string,
-  fileName: string,
-  filePath: string,
-) {
-  const files = await listAgentWorkspaceFiles(userId, projectSlug, directory);
-  if (files.some((file) => file.name === fileName && !file.isDir)) {
-    return;
+/** Add the canonical research structure to an existing local folder. Never replace user content. */
+export async function provisionResearchWorkspace(folderPath: string): Promise<void> {
+  // Check all name conflicts before creating anything, so an incompatible
+  // existing entry does not leave a half-created template behind.
+  for (const directory of RESEARCH_WORKSPACE_DIRECTORIES) {
+    const entry = await existingEntry(path.join(folderPath, directory));
+    if (entry && (!entry.isDirectory() || entry.isSymbolicLink())) {
+      throw new Error(`${directory} already exists but is not a regular folder`);
+    }
+  }
+  for (const file of canonicalFiles) {
+    const entry = await existingEntry(path.join(folderPath, file.relativePath));
+    if (entry && (!entry.isFile() || entry.isSymbolicLink())) {
+      throw new Error(`${file.relativePath} already exists but is not a regular file`);
+    }
   }
 
-  await writeAgentWorkspaceFile(userId, projectSlug, filePath, "");
+  for (const directory of RESEARCH_WORKSPACE_DIRECTORIES) {
+    await fs.mkdir(path.join(folderPath, directory), { recursive: true });
+  }
+  for (const file of canonicalFiles) {
+    try {
+      await fs.writeFile(path.join(folderPath, file.relativePath), file.content, { flag: "wx" });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      const entry = await existingEntry(path.join(folderPath, file.relativePath));
+      if (!entry?.isFile() || entry.isSymbolicLink()) {
+        throw new Error(`${file.relativePath} already exists but is not a regular file`);
+      }
+    }
+  }
 }

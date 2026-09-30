@@ -22,19 +22,20 @@ pnpm dev
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The root URL redirects to `/workspace`. `pnpm dev` creates `.beeblio/` if needed, applies SQLite migrations, and starts both the Next.js UI and the Eve agent. They listen on `127.0.0.1:3000` and `127.0.0.1:2000` respectively.
 
-Choose **Link Project Folder** to select a folder. You can also paste its absolute path. Beeblio stores the resolved path in SQLite and works with the files in place. Agent file tools display the folder as `/workspace`; agent shell commands run on your computer with that folder as the working directory. `$BEEBLIO_PROJECT_DIR` contains its absolute path.
+Choose **Link Project Folder** to select a folder. You can also paste its absolute path. Beeblio stores the resolved path in SQLite and works with the files in place. On linking, it adds any missing `1-References/`, `2-Data/`, `3-Analysis/`, and `4-Reports/` folders, plus `1-References/references.bib` and `3-Analysis/literature-matrix.matrix`. Existing files are preserved. Agent file tools display the folder as `/workspace`; agent shell commands run on your computer with that folder as the working directory. `$BEEBLIO_PROJECT_DIR` contains its absolute path.
 
 ## Configuration
 
-Only `OPENROUTER_API_KEY` and `OPENROUTER_MODEL_ID` are needed for the main agent. Copy [`.env.example`](./.env.example) for the full list of optional settings:
+The main agent needs `OPENROUTER_API_KEY`, `OPENROUTER_MODEL_ID`, and `OPENROUTER_MODEL_CONTEXT_WINDOW_TOKENS`. Set the context window to the token limit of the OpenRouter model you selected. Copy [`.env.example`](./.env.example) for all settings:
 
 | Setting | Used for |
 | --- | --- |
 | `OPENROUTER_MODEL_ID_LITE` | Lightweight tasks such as conversation titles and sentence suggestions |
 | `OPENROUTER_MODEL_ID_REVIEW` | Document review; falls back to the main model |
 | `OPENROUTER_VISION_MODEL_ID` | Image analysis; falls back to the main model if it supports vision |
-| `GOOGLE_API_KEY`, `GOOGLE_TRANSCRIPTION_MODEL_ID` | Audio transcription and Google-backed knowledge features |
-| `MONID_API_KEY`, `BRAVE_API_KEY` | Optional research and web tools |
+| `GOOGLE_API_KEY`, `GOOGLE_TRANSCRIPTION_MODEL_ID` | Google key and selected transcription model for audio transcription |
+| `GOOGLE_KNOWLEDGE_EMBEDDING_MODEL_ID`, `GOOGLE_KNOWLEDGE_QUERY_MODEL_ID` | Selected Google models for creating and querying Knowledge stores |
+| `MONID_API_KEY`, `BRAVE_SEARCH_API_KEY` | Optional research and web tools |
 | `CROSSREF_MAILTO` | Contact address for scholarly metadata requests |
 
 The application has one local user and no browser login, accounts, credits, billing, or entitlement checks. Keep the servers bound to loopback: the agent's Bash tool uses your computer's own environment and can access files outside a project folder through shell commands.

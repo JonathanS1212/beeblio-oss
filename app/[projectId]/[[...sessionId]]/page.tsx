@@ -10,9 +10,9 @@ import { parseProjectSettings } from "@/lib/project-settings";
 import { getOwnedProject } from "../actions";
 
 const toolCallVerbosity =
-  process.env.AGENT_TOOL_CALL_VERBOSITY === "compact" ? "compact" : "full";
+  process.env.AGENT_TOOL_CALL_VERBOSITY === "full" ? "full" : "compact";
 const reasoningVerbosity =
-  process.env.AGENT_REASONING_VERBOSITY === "compact" ? "compact" : "full";
+  process.env.AGENT_REASONING_VERBOSITY === "full" ? "full" : "compact";
 
 export default async function ProjectSessionPage({
   params,

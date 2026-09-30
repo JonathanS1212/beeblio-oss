@@ -11,7 +11,8 @@ export default defineTool({
     count: z.number().int().min(1).max(20).default(10),
   }),
   async execute({ query, count }, ctx: ToolContext) {
-    if (!process.env.BRAVE_SEARCH_API_KEY) {
+    const apiKey = process.env.BRAVE_SEARCH_API_KEY?.trim();
+    if (!apiKey) {
       throw new Error("Brave Search is not configured; use web_search instead");
     }
 
@@ -22,7 +23,7 @@ export default defineTool({
           headers: {
             Accept: "application/json",
             "Accept-Encoding": "gzip",
-            "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY,
+            "X-Subscription-Token": apiKey,
           },
           signal: ctx.abortSignal,
         },

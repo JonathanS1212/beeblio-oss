@@ -80,6 +80,25 @@ function ProjectDescription({ project }: { project: WorkspaceProject }) {
   );
 }
 
+function NewProjectCard() {
+  return (
+    <CreateProjectForm
+      customTrigger={
+        <Card
+          role="button"
+          tabIndex={0}
+          className="group relative flex min-h-56 cursor-pointer flex-col items-center justify-center gap-0 overflow-hidden rounded-[1.75rem] border-2 border-dashed border-primary/45 bg-transparent shadow-none transition-[transform,background-color] duration-200 hover:-translate-y-1 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/25"
+        >
+          <div className="relative z-10 flex flex-col items-center gap-3">
+            <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform group-hover:-translate-y-0.5"><Plus className="size-6" strokeWidth={1.7} /></span>
+            <span className="text-lg font-bold tracking-tight text-foreground">New Project</span>
+          </div>
+        </Card>
+      }
+    />
+  );
+}
+
 export function ProjectsDashboardClient({
   initialProjects,
   recentSessions,
@@ -185,14 +204,17 @@ export function ProjectsDashboardClient({
         </div>
       )}
 
-      {filteredProjects.length === 0 ? (
+      {initialProjects.length === 0 && !query ? (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <NewProjectCard />
+        </div>
+      ) : filteredProjects.length === 0 ? (
         <div className="flex min-h-80 flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-primary/20 bg-card/45 px-6 text-center shadow-[inset_0_1px_0_rgb(255_255_255/0.5)]">
           <div className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-primary/15 bg-primary/[0.06] text-primary shadow-sm"><FolderOpen className="size-5" /></div>
-          <h3 className="text-base font-semibold">{query ? "No Matches Found" : "No Projects Yet"}</h3>
+          <h3 className="text-base font-semibold">No Matches Found</h3>
           <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-            {query ? "Try adjusting your search query." : "Create your first research project to get started."}
+            Try adjusting your search query.
           </p>
-          {!query && <div className="mt-5"><CreateProjectForm /></div>}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -225,22 +247,7 @@ export function ProjectsDashboardClient({
               </CardContent>
             </Card>
           ))}
-          {!query && (
-            <CreateProjectForm
-              customTrigger={
-                <Card
-                  role="button"
-                  tabIndex={0}
-                  className="group relative flex min-h-56 cursor-pointer flex-col items-center justify-center gap-0 overflow-hidden rounded-[1.75rem] border-2 border-dashed border-primary/45 bg-transparent shadow-none transition-[transform,background-color] duration-200 hover:-translate-y-1 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/25"
-                >
-                  <div className="relative z-10 flex flex-col items-center gap-3">
-                    <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform group-hover:-translate-y-0.5"><Plus className="size-6" strokeWidth={1.7} /></span>
-                    <span className="text-lg font-bold tracking-tight text-foreground">New Project</span>
-                  </div>
-                </Card>
-              }
-            />
-          )}
+          {!query && <NewProjectCard />}
         </div>
       )}
     </>

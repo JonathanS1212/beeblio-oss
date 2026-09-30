@@ -301,7 +301,7 @@ export function ProjectSettingsDialog({
           }}
           className="flex flex-col gap-4"
         >
-          <div role="tablist" aria-label="Project settings sections" className="grid grid-cols-4 rounded-lg bg-muted p-1">
+          <div role="tablist" aria-label="Project settings sections" className="grid grid-cols-3 rounded-lg bg-muted p-1">
             <button
               type="button"
               role="tab"

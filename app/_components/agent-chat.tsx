@@ -80,8 +80,8 @@ export function AgentChat({
   sessionId,
   initialState,
   initialEvents,
-  toolCallVerbosity = "full",
-  reasoningVerbosity = "full",
+  toolCallVerbosity = "compact",
+  reasoningVerbosity = "compact",
   suggestedPrompts,
   includeSystemSkills = false,
 }: {

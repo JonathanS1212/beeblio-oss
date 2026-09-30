@@ -86,7 +86,7 @@ export const knowledgeStores = sqliteTable("knowledge_stores", {
     .references(() => projects.id, { onDelete: "cascade" })
     .unique(),
   providerStoreName: text("provider_store_name").notNull().unique(),
-  embeddingModel: text("embedding_model").notNull().default("models/gemini-embedding-2"),
+  embeddingModel: text("embedding_model").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
@@ -136,4 +136,3 @@ export const publicFiles = sqliteTable(
     unique("public_files_project_path_key").on(t.projectId, t.filePath),
   ],
 );
-

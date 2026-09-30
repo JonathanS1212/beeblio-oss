@@ -118,7 +118,9 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
     setBusyPaths((current) => new Set(current).add(filePath));
     try {
       const result = await addFileToKnowledge(projectId, filePath);
-      if (result.kind === "already_exists") {
+      if (result.kind === "configuration_error") {
+        toast.error("Could not add to Knowledge", { description: result.error });
+      } else if (result.kind === "already_exists") {
         toast.info("Already in Knowledge", { description: `${result.document.displayName} is already in this project's Knowledge.` });
       } else {
         clearSearch();

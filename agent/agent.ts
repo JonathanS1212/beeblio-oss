@@ -2,11 +2,17 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { defineAgent, defineDynamic } from "eve";
 import { timedModelFetch, turnModelDeadline } from "./lib/model-timeout";
 
-// Direct (non-gateway) models have no AI Gateway context-window metadata, so
-// eve cannot infer the window for compaction. Supply it explicitly per model.
-// gemini-2.5-flash has a 1,048,576-token context window.
-const FALLBACK_MODEL_ID = process.env.OPENROUTER_MODEL_ID!;
-const FALLBACK_MODEL_CONTEXT_WINDOW_TOKENS = 1_048_576;
+// Direct OpenRouter models do not provide Eve with context-window metadata.
+// Configure the size for the model selected in OPENROUTER_MODEL_ID.
+function mainModelConfig() {
+  const modelId = process.env.OPENROUTER_MODEL_ID?.trim();
+  const contextWindow = Number(process.env.OPENROUTER_MODEL_CONTEXT_WINDOW_TOKENS);
+  if (!modelId) throw new Error("OPENROUTER_MODEL_ID is not configured");
+  if (!Number.isSafeInteger(contextWindow) || contextWindow <= 0) {
+    throw new Error("OPENROUTER_MODEL_CONTEXT_WINDOW_TOKENS must be a positive integer for the selected model");
+  }
+  return { modelId, contextWindow };
+}
 
 export default defineAgent({
   // A dynamic model has no compiled fallback in current eve: the resolver must
@@ -19,7 +25,8 @@ export default defineAgent({
         const deadline = turnModelDeadline(auth?.attributes.turnModelDeadlineAt);
         const fetch = timedModelFetch(deadline);
         const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, fetch });
-        return { model: openrouter(FALLBACK_MODEL_ID), modelContextWindowTokens: FALLBACK_MODEL_CONTEXT_WINDOW_TOKENS };
+        const { modelId, contextWindow } = mainModelConfig();
+        return { model: openrouter(modelId), modelContextWindowTokens: contextWindow };
       },
     },
   }),

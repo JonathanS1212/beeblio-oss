@@ -22,7 +22,18 @@ export async function listKnowledgeDocuments(projectId: string) {
 
 export async function addFileToKnowledge(projectId: string, filePath: string) {
   const user = await requireUser();
-  const result = await queueKnowledgeFile(user.id, projectId, filePath);
+  let result: Awaited<ReturnType<typeof queueKnowledgeFile>>;
+  try {
+    result = await queueKnowledgeFile(user.id, projectId, filePath);
+  } catch (error) {
+    if (error instanceof Error && /API_KEY_INVALID|API key not valid/i.test(error.message)) {
+      return {
+        kind: "configuration_error" as const,
+        error: "Google rejected GOOGLE_API_KEY. Create a Gemini API key in Google AI Studio, update .env.local, and restart pnpm dev.",
+      };
+    }
+    throw error;
+  }
   if (result.kind === "queued") {
     after(() => processKnowledgeDocument(user.id, projectId, result.document.id).catch((error) => {
       console.error("[knowledge] background processing failed", error);

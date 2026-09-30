@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Mail, Monitor, Moon, Settings, Sun, User } from "lucide-react";
+import { useState } from "react";
+import { Globe, Monitor, Moon, Settings, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
-import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -15,8 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ProjectSettingsDialog } from "@/app/[projectId]/_components/project-settings-dialog";
 import type { ProjectSettings } from "@/lib/project-settings";
-
-const CONTACT_EMAIL = "mail@raihankalla.id";
 
 /**
  * projectId is passed only by the project rail layout, so the per-project
@@ -44,24 +41,7 @@ export function UserMenu({
   showThemeSwitcher?: boolean;
 }) {
   const { setTheme, theme } = useTheme();
-  const [emailCopied, setEmailCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const copyTimeoutRef = useRef<number>(0);
-
-  useEffect(() => () => window.clearTimeout(copyTimeoutRef.current), []);
-
-  const copyContactEmail = async () => {
-    if (typeof window === "undefined" || !navigator.clipboard?.writeText) return;
-    try {
-      await navigator.clipboard.writeText(CONTACT_EMAIL);
-      setEmailCopied(true);
-      toast.success(`Copied ${CONTACT_EMAIL}`);
-      window.clearTimeout(copyTimeoutRef.current);
-      copyTimeoutRef.current = window.setTimeout(() => setEmailCopied(false), 2000);
-    } catch {
-      // The browser can deny clipboard access; leave the button unchanged.
-    }
-  };
 
   const user = initialUser;
   if (!user) return null;
@@ -98,7 +78,6 @@ export function UserMenu({
           ) : null}
           {showThemeSwitcher ? (
             <>
-              <DropdownMenuSeparator />
               <div className="flex min-h-10 items-center gap-2 px-2.5 py-1.5" role="group" aria-label="Theme">
               <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
                 <ThemeIcon className="size-4 text-muted-foreground" />
@@ -130,27 +109,12 @@ export function UserMenu({
             </>
           ) : null}
           <DropdownMenuSeparator />
-          <div className="flex min-h-10 items-center gap-2 px-2.5 py-1.5" role="group" aria-label="Contact">
-            <a
-              href={`mailto:${CONTACT_EMAIL}`}
-              className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20"
-            >
-              <Mail className="size-4 shrink-0 text-muted-foreground" />
-              Contact
+          <DropdownMenuItem asChild>
+            <a href="https://beeblio.raihankalla.id">
+              <Globe className="size-4" />
+              <span>Beeblio</span>
             </a>
-            <button
-              type="button"
-              aria-label={emailCopied ? "Copied" : "Copy email address"}
-              title={emailCopied ? "Copied" : `Copy ${CONTACT_EMAIL}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                copyContactEmail();
-              }}
-              className={`flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-card hover:text-foreground ${emailCopied ? "text-primary" : "text-muted-foreground"}`}
-            >
-              {emailCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-            </button>
-          </div>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       {projectId ? (
