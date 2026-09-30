@@ -15,6 +15,10 @@ pnpm build:eve
 
 Do not commit `.env.local`, `.beeblio/`, linked project files, generated builds, or API credentials. Update the README and `.env.example` when changing setup or configuration. Explain behavior changes and how you checked them in pull requests.
 
+## Contribution terms
+
+Beeblio is source available under the [PolyForm Noncommercial License 1.0.0](LICENSE.md), and when you submit a pull request, your contribution is licensed under the same terms as the rest of the project. Beeblio also exists as a hosted service, which runs under a separate commercial license. Before we include a community contribution in the hosted service, we will ask for your OK on the pull request — a short reply confirming it is enough.
+
 ## Reporting problems
 
 For bugs and feature requests, open a GitHub issue with steps to reproduce and the expected behavior. For vulnerabilities, follow [SECURITY.md](SECURITY.md) instead of posting details publicly.
