@@ -1144,7 +1144,7 @@ export function MarkdownTiptapEditor({
                 ) : null}
                 <EditorContent editor={editor} />
                 {citationOrder.length ? <GeneratedBibliography references={references} citationOrder={citationOrder} style={citationStyle} title={bibliographyTitle} font={bibliographyFont} defaultFont={{ family: documentDefaults.fontFamily, size: documentDefaults.fontSize }} loading={!referencesLoaded} onTitleChange={(title) => { setBibliographyTitle(title); emitMarkdown(bodyMarkdownRef.current, title); }} onFontChange={(font) => { setBibliographyFont(font); emitMarkdown(bodyMarkdownRef.current, bibliographyTitle, citationStyle, citationOrderRef.current, font); }} /> : null}
-                {/* {!publicView.shareId ? (
+                {!publicView.shareId ? (
                   <AskBeeblio
                     editor={editor}
                     filePath={filePath}
@@ -1157,7 +1157,7 @@ export function MarkdownTiptapEditor({
                       setMentionSearch({ ...selection, query: "", mode: "citation" });
                     }}
                   />
-                ) : null} */}
+                ) : null}
               </div>
             </CitationContext.Provider>
           </div>

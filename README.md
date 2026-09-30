@@ -1,38 +1,58 @@
-# Beeblio (local edition)
+# Beeblio
 
-Beeblio is an AI research workspace. The Next.js UI and Eve agent run on your computer. A project links to an existing folder; Beeblio reads and edits its files in place.
+Beeblio is a local AI research workspace. Its Next.js interface and Eve agent run on your computer, and each project points to an existing folder. Beeblio reads and edits that folder directly; linking a project does not copy or upload its files.
 
 ## Requirements
 
 - Node.js 24 and pnpm 11
-- An OpenRouter API key and model ID
-- Python 3 and any local analysis packages you want the agent to use
-- LibreOffice for local previews of legacy Office documents
+- An OpenRouter API key and model ID for the agent
+- Bash and Python 3 for local agent commands and analysis
+- Optional: LibreOffice (`soffice`) for previews of legacy Office files; other command-line tools and Python packages for the workflows you want to run
 
-## Start
+The folder picker uses macOS's native chooser. On other systems, enter an existing absolute folder path in the project form.
+
+## Run locally
 
 ```bash
 pnpm install
 cp .env.example .env.local
-# Add OPENROUTER_API_KEY and OPENROUTER_MODEL_ID to .env.local
+# Set OPENROUTER_API_KEY and OPENROUTER_MODEL_ID in .env.local
 pnpm dev
 ```
 
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The single `pnpm dev` command applies SQLite migrations and starts both Next.js and Eve. It creates `.beeblio/beeblio.sqlite` and an internal service secret automatically. The Eve endpoint listens on `127.0.0.1:2000`.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The root URL redirects to `/workspace`. `pnpm dev` creates `.beeblio/` if needed, applies SQLite migrations, and starts both the Next.js UI and the Eve agent. They listen on `127.0.0.1:3000` and `127.0.0.1:2000` respectively.
 
-Choose **Link Project Folder** and select any existing local folder. Beeblio records its absolute path in SQLite. It does not import, duplicate, or move the folder. Deleting a project from the dashboard only removes its listing; the folder remains on disk.
+Choose **Link Project Folder** to select a folder. You can also paste its absolute path. Beeblio stores the resolved path in SQLite and works with the files in place. Agent file tools display the folder as `/workspace`; agent shell commands run on your computer with that folder as the working directory. `$BEEBLIO_PROJECT_DIR` contains its absolute path.
 
-## Local services
+## Configuration
 
-- **Database:** SQLite in `.beeblio/beeblio.sqlite`; migrations live in `drizzle/`.
-- **Files:** The selected folder is the source of truth. Browser uploads and downloads go through local Next.js routes.
-- **Agent compute:** Eve runs shell commands and Python directly on your computer with the linked project folder as the working directory. It uses your installed packages and tools. No container or separate compute server is needed.
-- **Document exports:** Markdown, DOCX, and LaTeX exports run locally. The PDF export option is removed; convert an exported DOCX to PDF with your local software if needed. Legacy Office previews use LibreOffice when installed.
-- **External APIs:** OpenRouter is required for model calls. Google, Monid, Brave, and Crossref are optional and only needed for their respective features.
+Only `OPENROUTER_API_KEY` and `OPENROUTER_MODEL_ID` are needed for the main agent. Copy [`.env.example`](./.env.example) for the full list of optional settings:
 
-Local data is not automatically backed up. Back up project folders and `.beeblio/beeblio.sqlite` if you need to preserve both files and conversation history.
+| Setting | Used for |
+| --- | --- |
+| `OPENROUTER_MODEL_ID_LITE` | Lightweight tasks such as conversation titles and sentence suggestions |
+| `OPENROUTER_MODEL_ID_REVIEW` | Document review; falls back to the main model |
+| `OPENROUTER_VISION_MODEL_ID` | Image analysis; falls back to the main model if it supports vision |
+| `GOOGLE_API_KEY`, `GOOGLE_TRANSCRIPTION_MODEL_ID` | Audio transcription and Google-backed knowledge features |
+| `MONID_API_KEY`, `BRAVE_API_KEY` | Optional research and web tools |
+| `CROSSREF_MAILTO` | Contact address for scholarly metadata requests |
 
-## Commands
+The application has one local user and no browser login, accounts, credits, billing, or entitlement checks. Keep the servers bound to loopback: the agent's Bash tool uses your computer's own environment and can access files outside a project folder through shell commands.
+
+## Where data lives
+
+- **Project files:** Your linked folders. Browser uploads, downloads, and agent file operations use local filesystem routes.
+- **Application data:** `.beeblio/beeblio.sqlite` stores projects, conversation state, knowledge metadata, and share records. Schema migrations are in [`drizzle/`](./drizzle/).
+- **Internal secret:** `.beeblio/agent-secret` is generated automatically for the local UI-to-agent connection.
+- **Agent compute:** Eve runs Bash and Python on the host. No Docker image, Blaxel job, compute server, or separate database server is required. The bundled `beeblio_research` Python helper is available to agent commands; other Python packages come from your local environment.
+
+Beeblio still calls external model and research APIs when those features are used. Back up both your project folders and `.beeblio/` if you need to preserve files and conversation history.
+
+## Documents
+
+The Markdown editor can export DOCX, DOCX with Mendeley or Zotero citations, LaTeX, and portable Markdown. Direct PDF export and its Gotenberg service have been removed. To make a PDF, export DOCX and convert it with your local document software. Legacy Office previews use local LibreOffice when available.
+
+## Development commands
 
 ```bash
 pnpm typecheck
@@ -40,5 +60,3 @@ pnpm build
 pnpm build:eve
 pnpm db:migrate
 ```
-
-The local launcher binds the UI and Eve to loopback addresses.
