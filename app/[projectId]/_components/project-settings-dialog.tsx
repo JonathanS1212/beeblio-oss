@@ -18,10 +18,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -54,7 +51,6 @@ import {
   saveProjectDetails,
   saveProjectIncludeSystemSkills,
 } from "../settings-actions";
-import { notifyUpcomingFeature } from "./upcoming-feature";
 
 const PREVIEW_REFERENCE: CitationReference = {
   id: "sample",
@@ -450,7 +446,7 @@ export function ProjectSettingsDialog({
               <div className="min-w-0">
                 <Label className="text-xs">System Skills</Label>
                 <p className="text-xs text-muted-foreground">
-                  Show Beeblio's built-in agent skills in chat slash mentions.
+                  Show Beeblio&apos;s built-in agent skills in chat slash mentions.
                 </p>
               </div>
               <Switch

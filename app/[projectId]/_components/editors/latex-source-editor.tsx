@@ -60,6 +60,8 @@ export function LatexSourceEditor({ value, onChange }: { value: string; onChange
       }),
     });
     return () => view.destroy();
+  // The editor is created once; incoming value changes are handled separately.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return <div ref={parentRef} className="min-h-0 flex-1 overflow-hidden" />;

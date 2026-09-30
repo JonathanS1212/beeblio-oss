@@ -23,7 +23,7 @@ function CopyButtonLabel() {
   );
 }
 
-export function CopyToWorkspaceButton({ shareId, filePath }: { shareId: string, filePath: string }) {
+export function CopyToWorkspaceButton({ shareId }: { shareId: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [projects, setProjects] = useState<{ slug: string; name: string }[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string>("");
@@ -74,7 +74,7 @@ export function CopyToWorkspaceButton({ shareId, filePath }: { shareId: string, 
       const destPath = await copyPublicFile(shareId, selectedSlug);
       toast.success("File copied to your workspace!");
       router.push(`/${selectedSlug}?file=${encodeURIComponent(destPath)}`);
-    } catch (err) {
+    } catch {
       toast.error("Failed to copy file");
       setIsLoading(false);
     }

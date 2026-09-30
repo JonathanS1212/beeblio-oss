@@ -5,7 +5,6 @@ import { generateFormHtml } from "../../lib/forms/generate.ts";
 import { FORMS_DIRECTORY, parseFormDefinition } from "../../lib/forms/schema.ts";
 import {
   resolveAuthenticatedWorkspace,
-  toWorkspaceRelativePath,
 } from "../workspace-paths";
 import { readWorkspaceFile, writeWorkspaceFile, WorkspaceFileError } from "../workspace-files";
 

@@ -274,13 +274,12 @@ async function prepareMarkdown(
 
   const inlineImages = async (line: string): Promise<string> => {
     if (!line.includes("![")) return line;
-    const replacements = new Map<string, string | null>();
     for (const match of line.matchAll(IMAGE)) {
       const source = match[2];
       if (imageCache.has(source)) continue;
       imageCache.set(source, await resolveFigure(source, figures, nextFigureName, loadImage));
     }
-    return line.replace(IMAGE, (match, alt: string, source: string) => {
+    return line.replace(IMAGE, (_match, alt: string, source: string) => {
       const figure = imageCache.get(source) ?? null;
       return figure ? `![${alt}](${figure})` : `*(${alt || source} — figure omitted)*`;
     });

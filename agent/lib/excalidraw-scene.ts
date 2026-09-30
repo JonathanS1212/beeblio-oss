@@ -589,7 +589,7 @@ export function addCompactElements(
   }
 
   for (const input of pendingConnectors) {
-    const { element, extras } = buildConnector(input, scene, index, now);
+    const { element, extras } = buildConnector(input, index, now);
     scene.elements.push(element, ...extras);
     index.add(element);
     for (const extra of extras) index.add(extra);
@@ -601,7 +601,6 @@ export function addCompactElements(
 
 function buildConnector(
   input: CompactElementInput,
-  scene: ExcalidrawScene,
   index: SceneIndex,
   now: number,
 ): { element: SceneElement; extras: SceneElement[] } {

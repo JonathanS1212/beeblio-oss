@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   useEffect,
@@ -15,23 +14,18 @@ import {
   type SyntheticEvent,
 } from "react";
 import {
-  Braces,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Database,
   FileText,
   Files,
   FolderOpen,
   Info,
   Loader2,
-  MessageSquareText,
-  PanelLeftClose,
-  PanelLeftOpen,
   PenTool,
   Plus,
   Search,
-  Shield, ShieldCheck,
+  ShieldCheck,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -113,7 +107,6 @@ import {
   type WorkspaceSelectionProvider,
   type WorkspaceUnsavedFile,
 } from "./workspace-context";
-import { notifyUpcomingFeature } from "./upcoming-feature";
 
 interface ProjectLayoutUIProps {
   projectId: string;
@@ -123,13 +116,12 @@ interface ProjectLayoutUIProps {
   initialRootTreeChildren: Record<string, FileEntry[]>;
   /** User-scoped skill list (server-resolved) so the Skills panel opens populated. */
   initialSkills?: SkillSummary[];
-  initialSessions: any[];
+  initialSessions: Array<{ id: string; title: string | null }>;
   /** File opened when the page loads without a ?file= param (server-resolved). */
   defaultFilePath?: string;
   /** Server-read text of the default file, seeding the client cache so its first open renders without a round trip. */
   defaultFileContent?: string;
   userMenu?: ReactNode;
-  storageMeter?: ReactNode;
   children: ReactNode;
 }
 
@@ -158,7 +150,6 @@ export function ProjectLayoutUI({
   defaultFilePath,
   defaultFileContent,
   userMenu,
-  storageMeter,
   children,
 }: ProjectLayoutUIProps) {
   const isMobile = useIsMobile();
@@ -355,15 +346,6 @@ export function ProjectLayoutUI({
     return () => document.body.classList.remove("workspace-fullscreen");
   }, []);
 
-  const toggleRail = () => {
-    setRailTooltipActivity(undefined);
-    setRailExpanded((current) => {
-      const next = !current;
-      window.localStorage.setItem("beeblio:workspace-rail-expanded", String(next));
-      return next;
-    });
-  };
-
   useEffect(() => {
     const openChatForContext = () => {
       setAgentOpen(true);
@@ -447,6 +429,8 @@ export function ProjectLayoutUI({
     // The URL already carries an explicit ?file= param; mirror the default
     // open into it so reloads and shared links land on the same file.
     setFileInUrl(filePath);
+  // Seed the initial server-selected tab once; later file changes use the tab actions.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setFileInUrl = (filePath?: string) => {
@@ -538,7 +522,7 @@ export function ProjectLayoutUI({
     };
     window.addEventListener(WORKSPACE_MUTATION_EVENT, handler);
     return () => window.removeEventListener(WORKSPACE_MUTATION_EVENT, handler);
-  }, []);
+  }, [projectId]);
 
   const createUntitledDraft = (kind: UntitledDraftKind) => {
     const draft = untitledDraftFile(nextUntitledNumber(openFiles.map((file) => file.path), kind), kind);
@@ -1438,7 +1422,7 @@ export function ProjectLayoutUI({
             <DialogTitle>Unsaved Changes</DialogTitle>
             <DialogDescription>
               Do you want to save the changes you made to this file?
-              Your changes will be lost if you don't save them.
+              Your changes will be lost if you don&apos;t save them.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row sm:justify-end gap-2">

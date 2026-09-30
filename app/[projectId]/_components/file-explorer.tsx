@@ -3,7 +3,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownAZ,
-  ArrowDownZA,
   ArrowUpAZ,
   ArrowDown01,
   ArrowUp01,
@@ -71,9 +70,6 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { isAudioFileName, isVideoFileName } from "@/lib/media-files";
-import {
-  PROJECT_BIBLIOGRAPHY_NAME,
-} from "@/lib/project-bibliography";
 import { affectsProtectedWorkspacePath } from "@/lib/protected-workspace";
 import {
   getWorkspaceDragPaths,
@@ -312,6 +308,8 @@ export function FileExplorer({
       window.removeEventListener(REFRESH_EVENT, handler);
       window.removeEventListener("focus", handler);
     };
+  // The refresh handler reads current refs; reattaching it on every render is unnecessary.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // Seed the shared folder cache (the move dialogs read it) with the listings

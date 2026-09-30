@@ -1,4 +1,3 @@
-import convert_markdown_document from "#tools/convert_markdown_document.ts";
 import {
   AudioLinesIcon,
   BotIcon,
@@ -10,7 +9,7 @@ import {
   FilePenIcon,
   FileTextIcon,
   FlagIcon,
-  FolderOpenIcon,FileIcon,
+  FileIcon,
   FolderPlusIcon,
   FolderSearchIcon,
   GlobeIcon,
@@ -19,7 +18,7 @@ import {
   ListTodoIcon,
   MicIcon,
   SearchIcon,
-  SparklesIcon, HammerIcon,
+  HammerIcon,
   SquarePenIcon,
   TableIcon,
   TerminalIcon,
@@ -29,7 +28,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { EveDynamicToolPart } from "eve/react";
-import fetch_openalex_works from "#tools/fetch_openalex_works.ts";
 
 export type ToolCallDescription = {
   /** Ready-to-display action label, or undefined for unknown tools. */

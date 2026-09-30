@@ -1,6 +1,8 @@
 import {
   formatBibliographyEntry,
   formatCitation,
+  citationKeys,
+  formatCitationGroup,
   sortCitedReferences,
   type CitationReference,
   type CitationMode,
@@ -64,9 +66,26 @@ const FENCE_CLOSE = /^\s{0,3}(```+|~~~+)\s*$/;
 // (set from the editor's font controls); consumers treat it as part of the
 // token so it never leaks into rendered output.
 const CITATION_PARAMS_SOURCE = String.raw`(?:\{(?:font|size|mode)=[^{}\n|]*(?:\|(?:font|size|mode)=[^{}\n|]*)*\})?`;
-export const CITATION_TOKEN_REGEX = new RegExp(String.raw`\[@([A-Za-z0-9_:.-]+)\](` + CITATION_PARAMS_SOURCE + ")", "g");
+export const CITATION_TOKEN_REGEX = new RegExp(String.raw`\[@([A-Za-z0-9_:.-]+(?:\s*;\s*@[A-Za-z0-9_:.-]+)*)\](` + CITATION_PARAMS_SOURCE + ")", "g");
 export const CITATION_TOKEN_SUFFIX_SOURCE = CITATION_PARAMS_SOURCE;
 const CITATION = CITATION_TOKEN_REGEX;
+const ESCAPED_CITATION = new RegExp(String.raw`\\+\[(@[A-Za-z0-9_:.-]+(?:\s*;\s*@[A-Za-z0-9_:.-]+)*)\\*\]`, "g");
+
+/** Normalize citation brackets escaped by markdown-generating tools. */
+export function normalizeEscapedCitations(markdown: string): string {
+  let insideFence = false;
+  return markdown.split("\n").map((line) => {
+    if (insideFence) {
+      if (FENCE_CLOSE.test(line)) insideFence = false;
+      return line;
+    }
+    if (FENCE_OPEN.test(line)) {
+      insideFence = true;
+      return line;
+    }
+    return line.replace(ESCAPED_CITATION, "[$1]");
+  }).join("\n");
+}
 
 export function citationModeFromSuffix(suffix = ""): CitationMode {
   return /(?:^\{|\|)mode=narrative(?:\||\}$)/.test(suffix) ? "narrative" : "default";
@@ -92,7 +111,7 @@ export type MarkdownBibliographyOptions = {
  */
 export function replaceMarkdownCitations(
   body: string,
-  format: (id: string, occurrence: number, mode: CitationMode) => string,
+  format: (id: string, occurrence: number, mode: CitationMode, order: string[]) => string,
 ): { markdown: string; citedIds: string[] } {
   const citedIds: string[] = [];
   const lines: string[] = [];
@@ -112,8 +131,10 @@ export function replaceMarkdownCitations(
     lines.push(
       line.includes("[@")
         ? line.replace(CITATION, (_match, id: string, suffix: string) => {
-            if (!citedIds.includes(id)) citedIds.push(id);
-            return format(id, citedIds.indexOf(id) + 1, citationModeFromSuffix(suffix));
+            const ids = citationKeys(id);
+            for (const key of ids) if (!citedIds.includes(key)) citedIds.push(key);
+            if (ids.length > 1) return format(id, citedIds.indexOf(ids[0]) + 1, "default", citedIds);
+            return format(id, citedIds.indexOf(id) + 1, citationModeFromSuffix(suffix), citedIds);
           })
         : line,
     );
@@ -140,10 +161,12 @@ export function renderMarkdownBibliography(
   const markerMatch = BIBLIOGRAPHY_MARKER.exec(markdown);
   const style = options.style ?? ((markerMatch?.[3] || "apa") as CitationStyle);
   const title = (options.title ?? markerMatch?.[2])?.trim() || "References";
-  const body = markerMatch ? markdown.slice(0, markerMatch.index) : markdown;
+  const body = normalizeEscapedCitations(markerMatch ? markdown.slice(0, markerMatch.index) : markdown);
   const byId = new Map(options.references.map((reference) => [reference.id, reference]));
 
-  const { markdown: cited, citedIds: order } = replaceMarkdownCitations(body, (id, occurrence, mode) => {
+  const { markdown: cited, citedIds: order } = replaceMarkdownCitations(body, (id, occurrence, mode, currentOrder) => {
+    const keys = citationKeys(id);
+    if (keys.length > 1) return formatCitationGroup(keys, byId, style, currentOrder);
     const reference = byId.get(id);
     if (!reference) return `[@${id}]`;
     const text = formatCitation(reference, style, occurrence, mode);
@@ -181,6 +204,7 @@ export function renderMarkdownBibliography(
 
 /** Converts editor citation tokens to Pandoc's parenthetical/textual syntax. */
 export function renderPandocCitations(markdown: string): string {
+  markdown = normalizeEscapedCitations(markdown);
   let insideFence = false;
   return markdown.split("\n").map((line) => {
     if (insideFence) {

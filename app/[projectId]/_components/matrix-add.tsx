@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -69,7 +67,7 @@ export function useMatrixAdd(
     const onChange = () => void refresh();
     window.addEventListener("beeblio:workspace-changed", onChange);
     return () => window.removeEventListener("beeblio:workspace-changed", onChange);
-  }, [refresh]);
+  }, [projectId, refresh]);
 
   const commit = useCallback(async (request: MatrixAddRequest, matrixPath?: string) => {
     setSaving(true);

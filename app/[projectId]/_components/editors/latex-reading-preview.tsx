@@ -106,7 +106,7 @@ function mathPart(value: string) { if (value.startsWith("$$") && value.endsWith(
 function renderMath(value: string, displayMode: boolean) { return katex.renderToString(value, { displayMode, throwOnError: false, strict: false }); }
 function stripComments(source: string) { return source.replace(/(^|[^\\])%.*$/gm, "$1"); }
 function environment(source: string, name: string) { const start = source.indexOf(`\\begin{${name}}`), end = source.lastIndexOf(`\\end{${name}}`); return start >= 0 && end > start ? source.slice(start + name.length + 8, end) : undefined; }
-function commandArguments(source: string, command: string) { const results: string[] = [], expression = new RegExp(`\\\\${command}\\*?(?:\\[[^\\]]*\\])?\\s*\\{`, "g"); let match: RegExpExecArray | null; while ((match = expression.exec(source))) { const group = readGroup(source, expression.lastIndex - 1); results.push(group.value); expression.lastIndex = group.end; } return results; }
+function commandArguments(source: string, command: string) { const results: string[] = [], expression = new RegExp(`\\\\${command}\\*?(?:\\[[^\\]]*\\])?\\s*\\{`, "g"); while (expression.exec(source)) { const group = readGroup(source, expression.lastIndex - 1); results.push(group.value); expression.lastIndex = group.end; } return results; }
 function readGroup(source: string, open: number) { let depth = 0; for (let index = open; index < source.length; index++) { if (source[index] === "{" && source[index - 1] !== "\\") depth++; if (source[index] === "}" && source[index - 1] !== "\\" && --depth === 0) return { value: source.slice(open + 1, index), end: index + 1 }; } return { value: source.slice(open + 1), end: source.length }; }
 
 function removeCommandCalls(source: string, commands: string[]) {

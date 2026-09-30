@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SessionList } from "./session-list";
+import { SessionList, type ProjectSession } from "./session-list";
 
 export function ChatHistory({
   projectId,
@@ -23,7 +23,7 @@ export function ChatHistory({
   onDeleteConversation,
 }: {
   readonly projectId: string;
-  readonly initialSessions: any[];
+  readonly initialSessions: ProjectSession[];
   readonly open: boolean;
   readonly query: string;
   readonly newConversationHref: string;

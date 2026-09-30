@@ -33,10 +33,12 @@ export default defineTool({
           `Brave Search API responded with status: ${response.status}`,
         );
       }
-      const data = await response.json() as any;
+      const data = await response.json() as {
+        web?: { results?: Array<{ title: string; url: string; description?: string; age?: string }> };
+      };
       return {
         query,
-        results: (data.web?.results ?? []).slice(0, count).map((item: any) => ({
+        results: (data.web?.results ?? []).slice(0, count).map((item) => ({
           title: item.title,
           url: item.url,
           description: truncateText(String(item.description ?? ""), 1_000).content,

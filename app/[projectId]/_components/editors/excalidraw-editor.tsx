@@ -44,7 +44,7 @@ export function ExcalidrawEditor({ projectId, file, sourceUrl, onSaved }: Worksp
   const handleSceneChange = useCallback((sceneJson: string, count: number) => {
     text.setDraft(sceneJson);
     setElementCount(count);
-  }, [text.setDraft]);
+  }, [text]);
 
   return (
     <EditorShell

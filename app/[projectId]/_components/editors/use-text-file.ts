@@ -385,7 +385,7 @@ export function useTextFile(
     } finally {
       setSaving(false);
     }
-  }, [draft, filePath, onSaved, projectId, publicView.shareId, replaceWithSavedContent, saveUntitledDraft]);
+  }, [cacheable, draft, filePath, onSaved, projectId, publicView.shareId, replaceWithSavedContent, saveUntitledDraft]);
 
   useEffect(() => {
     if (!pendingReviewCommit) return;

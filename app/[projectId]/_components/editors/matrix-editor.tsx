@@ -5,7 +5,7 @@ import {
   ArrowDownAZ,
   ArrowUpAZ,
   ArrowUpRight,
-  ClipboardCopy, Copy,
+  Copy,
   Code2,
   Download,
   FileJson,
@@ -87,7 +87,6 @@ import { LiteratureMap } from "./literature-map/literature-map";
 import { SourceCodeEditor } from "./source-code-editor";
 import { type WorkspaceEditorProps } from "./types";
 import { useTextFile } from "./use-text-file";
-import { notifyUpcomingFeature } from "../upcoming-feature";
 
 type MatrixMode = "table" | "map" | "source";
 type SortState = { key: string; direction: "asc" | "desc" };
@@ -192,7 +191,7 @@ export function MatrixEditor({ projectId, file, sourceUrl, onSaved }: WorkspaceE
   const matrix = parsed?.ok ? parsed.matrix : undefined;
   const updateMatrix = useCallback((next: LiteratureMatrix) => {
     text.setDraft(serializeMatrix(next));
-  }, [text.setDraft]);
+  }, [text]);
 
   const setCell = (citationKey: string, columnId: string, value: string) => {
     if (!matrix) return;

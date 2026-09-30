@@ -13,7 +13,6 @@ import {
 } from "@/lib/project-settings";
 import { getProjectSettings } from "../settings-actions";
 import { ProjectSettingsDialog } from "./project-settings-dialog";
-import { notifyUpcomingFeature } from "./upcoming-feature";
 
 /**
  * The editor's live view of the project settings (entry point without the

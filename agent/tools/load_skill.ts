@@ -49,6 +49,6 @@ export default defineTool({
       if (hostSkill === null) throw new Error(`Project skill ${slug} could not be loaded`);
       return hostSkill;
     }
-    return (defaultLoadSkill.execute as any)(input, ctx);
+    return defaultLoadSkill.execute(input, ctx);
   },
 });

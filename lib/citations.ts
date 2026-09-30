@@ -81,6 +81,19 @@ export function formatCitation(reference: CitationReference | undefined, style: 
   return `(${author}, ${reference.year || "n.d."})`;
 }
 
+export function citationKeys(id: string): string[] {
+  return id.split(/\s*;\s*@?/).map((key) => key.replace(/^@/, "").trim()).filter(Boolean);
+}
+
+export function formatCitationGroup(ids: string[], references: Map<string, CitationReference>, style: CitationStyle, order: string[]): string {
+  const parts = ids.map((id) => {
+    const reference = references.get(id);
+    if (!reference) return `@${id}`;
+    return formatCitation(reference, style, Math.max(1, order.indexOf(id) + 1)).replace(/^[([]|[)\]]$/g, "");
+  });
+  return `${style === "ieee" ? "[" : "("}${parts.join("; ")}${style === "ieee" ? "]" : ")"}`;
+}
+
 export function formatBibliographyEntry(reference: CitationReference, style: CitationStyle, number: number) {
   const authors = parseAuthors(reference.authors);
   const author = authors.length ? authors.map((item) => item.familyFirst).join(", ") : reference.organization || "Unknown author";
@@ -127,5 +140,13 @@ function parseAuthors(value: string) {
 }
 
 export function cleanBibtexText(value = "") {
-  return value.replace(/[{}]/g, "").replace(/\\([&%_$#])/g, "$1").replace(/\s+/g, " ").trim();
+  const accents: Record<string, string> = { "'": "\u0301", "`": "\u0300", "^": "\u0302", '"': "\u0308", "~": "\u0303", "=": "\u0304", ".": "\u0307", "c": "\u0327", "v": "\u030c" };
+  const letters: Record<string, string> = { ae: "æ", AE: "Æ", oe: "œ", OE: "Œ", aa: "å", AA: "Å", o: "ø", O: "Ø", l: "ł", L: "Ł", ss: "ß" };
+  return value
+    .replace(/\\(['`^"~=.cv])\s*\{?([A-Za-z])\}?/g, (_match, accent: string, letter: string) => `${letter}${accents[accent]}`.normalize("NFC"))
+    .replace(/\\(ae|AE|oe|OE|aa|AA|ss|o|O|l|L)(?![A-Za-z])/g, (_match, command: string) => letters[command])
+    .replace(/[{}]/g, "")
+    .replace(/\\([&%_$#])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
 }

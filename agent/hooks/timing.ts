@@ -34,7 +34,7 @@ export default defineHook({
     "turn.started"(event) {
       turns.set(event.data.turnId, { turnStartedAt: Date.now() });
     },
-    "step.started"(event, ctx) {
+    "step.started"(event) {
       const turn = turns.get(event.data.turnId);
       if (!turn || turn.stepStartedAt !== undefined) return;
       turn.stepStartedAt = Date.now();

@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateProjectForm } from "./create-project-form";
 import { ProjectCardMenu } from "./project-card-menu";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface WorkspaceProject {

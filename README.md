@@ -6,7 +6,7 @@ This is an early local-first release. It is intended for a single trusted user o
 
 ## License
 
-Beeblio is **source available** under the [PolyForm Noncommercial License 1.0.0](LICENSE). Personal and other noncommercial use is permitted; commercial use requires separate permission from the copyright holder. This is not an OSI-approved open-source license. Third-party dependencies retain their own licenses.
+Beeblio is **source available** under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). Personal and other noncommercial use is permitted; commercial use requires separate permission from the copyright holder. This is not an OSI-approved open-source license. Third-party dependencies retain their own licenses.
 
 ## Requirements
 
@@ -63,6 +63,7 @@ The Markdown editor can export DOCX, DOCX with Mendeley or Zotero citations, LaT
 
 ```bash
 pnpm typecheck
+pnpm lint
 pnpm build
 pnpm build:eve
 pnpm db:migrate

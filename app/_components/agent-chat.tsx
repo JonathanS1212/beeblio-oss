@@ -21,14 +21,6 @@ import { toast } from "sonner";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   ADD_FILE_TO_CHAT_EVENT,
   ADD_SELECTION_TO_CHAT_EVENT,
   ASK_AGENT_EVENT,
@@ -41,9 +33,7 @@ import {
   type ChatInteractionContext,
   type ChatSelectionContext,
 } from "@/lib/chat-context";
-import { isUntitledDraftPath, untitledDraftTabLabel } from "@/lib/untitled-draft";
 import { rememberWorkspaceEntries } from "@/lib/workspace-entry-index";
-import { cn } from "@/lib/utils";
 import { resizeImageForAgent } from "@/lib/client-image-resize";
 import { SYSTEM_SKILL_SUMMARIES } from "@/lib/skill-markdown";
 type SuggestedPrompt = { label: string; prompt: string };
@@ -1201,35 +1191,4 @@ function isOpenFileOutput(
 
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unable to cancel the response.";
-}
-
-function errorStatus(error: unknown) {
-  if (!error || typeof error !== "object" || !("status" in error)) return undefined;
-  return typeof error.status === "number" ? error.status : undefined;
-}
-
-function StatusDot({ status }: { readonly status: AgentStatus }) {
-  const isLive = status === "submitted" || status === "streaming";
-  const tone =
-    status === "error"
-      ? "bg-destructive"
-      : isLive
-        ? "bg-emerald-500"
-        : status === "ready"
-          ? "bg-muted-foreground"
-          : "bg-muted-foreground/50";
-
-  return (
-    <span className="relative flex size-1">
-      {isLive ? (
-        <span
-          className={cn(
-            "absolute inline-flex size-full animate-ping rounded-full opacity-75",
-            tone,
-          )}
-        />
-      ) : null}
-      <span className={cn("relative flex size-1 rounded-full transition-colors", tone)} />
-    </span>
-  );
 }

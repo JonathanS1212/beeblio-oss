@@ -1,8 +1,6 @@
 import { defineTool } from "eve/tools";
 import type { ToolContext } from "eve/tools";
 import { z } from "zod";
-import fs from "node:fs/promises";
-import path from "node:path";
 
 import {
   buildWorksIdsUrl,

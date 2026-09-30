@@ -12,6 +12,8 @@ export function CsvEditor({ projectId, file, sourceUrl, onSaved }: WorkspaceEdit
   const text = useTextFile(projectId, file.path, onSaved);
   const [rows, setRows] = useState<GridRows>([]);
 
+  // Draft edits already update rows in updateRows; only reloads should reparse them.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (!text.loading && !text.error) setRows(parseCsv(text.draft)); }, [text.loading, text.error, text.content, text.editorVersion]);
 
   const updateRows = (next: GridRows) => { setRows(next); text.setDraft(serializeCsv(next)); };

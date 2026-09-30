@@ -85,9 +85,9 @@ export function localProjectBackend(): SandboxBackend<Record<string, never>, Ses
 
 export default defineSandbox({
   backend: localProjectBackend,
-  async onSession({ use, ctx }) {
+  async onSession({ use: activateSandbox, ctx }) {
     const auth = ctx.session.auth.current;
     const identity = getWorkspaceIdentity({ principalId: auth?.principalId, projectSlug: auth?.attributes?.projectSlug, sessionId: ctx.session.id });
-    await use({ folder: await projectFolder(identity.userId, identity.projectSlug) });
+    await activateSandbox({ folder: await projectFolder(identity.userId, identity.projectSlug) });
   },
 });

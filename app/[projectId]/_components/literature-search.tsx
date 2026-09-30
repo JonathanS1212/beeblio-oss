@@ -511,7 +511,6 @@ export function LiteratureSearch({
   };
 
   const failures = results?.providers.filter((provider) => !provider.ok) || [];
-  const successfulProviders = results?.providers.filter((provider) => provider.ok).length || 0;
   const visibleItems = useMemo(() => sortLiteratureItems(results?.items || [], sort), [results?.items, sort]);
   const showEmptySearch = !results && !searching && !searchError;
 

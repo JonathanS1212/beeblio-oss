@@ -27,14 +27,13 @@ export default defineTool({
   }),
   async execute({ inputPath, outputPath }, ctx) {
     const auth = ctx.session.auth.current;
-    const { identity } = resolveAuthenticatedWorkspace({
+    resolveAuthenticatedWorkspace({
       principalId: auth?.principalId,
       projectSlug: auth?.attributes?.projectSlug,
       sessionId: ctx.session.id,
     });
     const inputRelative = toWorkspaceRelativePath(inputPath);
     const outputRelative = toWorkspaceRelativePath(outputPath);
-    const actualInputPath = `/workspace/${inputRelative}`;
     const actualOutputPath = `/workspace/${outputRelative}`;
     if (path.extname(actualOutputPath).toLowerCase() !== ".mp3") {
       throw new Error("Audio outputPath must end in .mp3");

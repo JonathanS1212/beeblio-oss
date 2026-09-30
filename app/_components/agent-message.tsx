@@ -11,7 +11,6 @@ import {
   CheckCircleIcon,
   ChevronDown,
   CircleIcon,
-  ExternalLinkIcon,
   FileIcon,
   Folder,
   ImageIcon,

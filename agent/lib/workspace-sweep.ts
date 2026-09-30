@@ -74,7 +74,6 @@ export async function snapshotWorkspace(
  * output, or undefined when nothing needed cleaning.
  */
 export async function sweepWorkspaceTextFiles(
-  ctx: ToolContext,
   before: WorkspaceStamp | undefined,
 ): Promise<string | undefined> {
   if (!before) return undefined;

@@ -101,6 +101,8 @@ export function BibliographyAddMenu({
         await importFile(file, file.name.toLocaleLowerCase().endsWith(".bib") ? "bib" : "paper");
       }
     })();
+  // Each drop request is handled once; recreating importFile must not replay it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dropRequest]);
 
   const addManual = async (draft: ReferenceDraft) => {

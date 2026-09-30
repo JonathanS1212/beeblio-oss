@@ -1,12 +1,10 @@
 import {
-  ChartPie,
   FileText,
   FolderOpen,
-  Images,
-  LibraryBig, Lightbulb,
+  Lightbulb,
   BookOpenText,
   Table2,
-  Wrench, Code, PencilSparkles,
+  PencilSparkles,
   type LucideIcon,
   ChartColumnIncreasing, FileImage,
 } from "lucide-react";

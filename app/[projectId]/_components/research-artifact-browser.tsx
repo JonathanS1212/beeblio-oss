@@ -13,7 +13,6 @@ import {
   FileSpreadsheet,
   FileText,
   FileVideo,
-  Image as ImageIcon,
   LibraryBig, BookOpenText,
   Loader2,
   Plus,
@@ -71,7 +70,6 @@ import { editorLoadsTextContent } from "./editors/registry";
 import { prefetchTextFile } from "./editors/text-content-cache";
 import { WorkspaceFileActions } from "./workspace-file-actions";
 import { BibliographyAddMenu } from "./bibliography-add-menu";
-import { notifyUpcomingFeature } from "./upcoming-feature";
 
 export type ResearchArtifactView = "references" | "data" | "analysis" | "reports" | "figures";
 
@@ -1126,7 +1124,6 @@ function FigureThumbnail({
     return (
       <span className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-[linear-gradient(45deg,var(--muted)_25%,transparent_25%),linear-gradient(-45deg,var(--muted)_25%,transparent_25%),linear-gradient(45deg,transparent_75%,var(--muted)_75%),linear-gradient(-45deg,transparent_75%,var(--muted)_75%)] bg-[length:14px_14px] bg-[position:0_0,0_7px,7px_-7px,-7px_0px]">
         {/* Workspace images are authenticated dynamic resources, so their dimensions are not known at build time. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={fileUrl(projectId, file.path)}
           alt=""

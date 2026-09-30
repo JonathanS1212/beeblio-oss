@@ -42,9 +42,12 @@ export default defineTool({
       if (!response.ok) {
         throw new Error(`World Bank API responded with status: ${response.status}`);
       }
-      const data = await response.json() as [Record<string, any>, unknown[]] | { message?: Array<{ value?: string }> };
+      const data = await response.json() as [Record<string, unknown>, unknown[]] | { message?: Array<{ value?: string }> };
       if (!Array.isArray(data) || !Array.isArray(data[1])) {
-        throw new Error(Array.isArray((data as any)?.message) ? (data as any).message.map((item: any) => item.value).join("; ") : "World Bank returned an invalid response");
+        const message = !Array.isArray(data) && Array.isArray(data.message)
+          ? data.message.map((item) => item.value).join("; ")
+          : "World Bank returned an invalid response";
+        throw new Error(message);
       }
       const metadata = data[0];
       const pageCount = Number(metadata.pages ?? 1);

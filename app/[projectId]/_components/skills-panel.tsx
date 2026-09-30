@@ -2,16 +2,15 @@
 
 import {
   ArrowLeft,
-  Check,
   Code,
   FormInput,
   Loader2,
   Plus,
   Trash2,
   TriangleAlert,
-  Wrench, PencilSparkles,
+  PencilSparkles,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -42,7 +41,6 @@ import {
   validateSkillDraft,
 } from "@/lib/skill-markdown";
 import { createSkill, deleteSkill, getSkill, listSkills, saveSkill, type SkillSummary } from "../skill-actions";
-import { notifyUpcomingFeature } from "./upcoming-feature";
 
 type EditorMode = "form" | "markdown";
 

@@ -1,13 +1,13 @@
 "use server";
 
 import path from "node:path";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { publicFiles, projects } from "@/db/schema";
 import { requireUser } from "@/lib/auth/session";
 import { getOwnedProject } from "./actions";
-import { readAgentWorkspaceFile, writeAgentWorkspaceFile, copyAgentWorkspacePath } from "@/lib/workspace-files";
+import { readAgentWorkspaceFile, writeAgentWorkspaceFile } from "@/lib/workspace-files";
 
 export async function copyPublicFile(shareId: string, destinationProjectSlug: string) {
   const user = await requireUser();

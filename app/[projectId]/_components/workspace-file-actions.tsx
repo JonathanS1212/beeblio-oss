@@ -39,7 +39,6 @@ import { FileNameInput, splitFileName } from "./file-name-input";
 import { fileUrl } from "./file-viewer";
 import { addFileToKnowledge } from "../knowledge-actions";
 import { acceptsKnowledgeFile } from "@/lib/knowledge-files";
-import { notifyUpcomingFeature } from "./upcoming-feature";
 
 export function WorkspaceFileActions({
   projectId,

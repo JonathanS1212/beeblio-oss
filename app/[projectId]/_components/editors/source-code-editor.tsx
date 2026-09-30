@@ -100,6 +100,8 @@ export function SourceCodeEditor({ value, extension, onChange }: { value: string
       viewRef.current = null;
       view.destroy();
     };
+  // The CodeMirror instance is stable; the following effect syncs value updates.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extension]);
 
   useEffect(() => {

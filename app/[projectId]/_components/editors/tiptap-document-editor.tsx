@@ -20,7 +20,7 @@ import {
   DOCUMENT_REVIEW_ANCHOR_EVENT,
   type DocumentReviewAnchorDetail,
 } from "@/lib/document-review";
-import { bibliographyReferences, formatCitation, type CitationReference, type CitationStyle } from "@/lib/citations";
+import { citationKeys, formatCitation, formatCitationGroup, type CitationReference, type CitationStyle } from "@/lib/citations";
 import { parseBibtexEntries, type BibtexEntry } from "@/lib/bibtex";
 import {
   DEFAULT_DOCUMENT_SETTINGS,
@@ -30,7 +30,7 @@ import {
 } from "@/lib/project-settings";
 import { OPEN_LITERATURE_SEARCH_EVENT, type LiteratureItem, type OpenLiteratureSearchDetail } from "@/lib/literature/types";
 import { OPEN_WORKSPACE_FILE_EVENT, type OpenWorkspaceFileDetail } from "@/lib/chat-context";
-import { BIBLIOGRAPHY_MARKER, joinBibliographyMetadata, splitBibliographyMetadata } from "@/lib/markdown-bibliography";
+import { BIBLIOGRAPHY_MARKER, joinBibliographyMetadata, normalizeEscapedCitations, splitBibliographyMetadata } from "@/lib/markdown-bibliography";
 import { ensureBlankLineAfterTables } from "@/lib/markdown-repair";
 import { PROJECT_BIBLIOGRAPHY_PATH } from "@/lib/project-bibliography";
 import { announceWorkspaceChange, WORKSPACE_CHANGED_EVENT, type WorkspaceChangedDetail } from "@/lib/workspace-change";
@@ -80,7 +80,7 @@ type DocumentMapHeading = {
 // markdown the editor re-emits on the next user edit.
 function splitBibliographyMetadataWithRepair(markdown: string) {
   const metadata = splitBibliographyMetadata(markdown);
-  return { ...metadata, body: ensureBlankLineAfterTables(metadata.body).repaired };
+  return { ...metadata, body: normalizeEscapedCitations(ensureBlankLineAfterTables(metadata.body).repaired) };
 }
 
 export function MarkdownTiptapEditor({
@@ -102,10 +102,7 @@ export function MarkdownTiptapEditor({
   /** Project-level rendering defaults; inline/document settings still win. */
   documentDefaults?: DocumentDefaultSettings;
 }) {
-  const initialMetadata = useMemo(
-    () => splitBibliographyMetadataWithRepair(markdown),
-    [],
-  );
+  const [initialMetadata] = useState(() => splitBibliographyMetadataWithRepair(markdown));
   const [mode, setMode] = useState<"visual" | "source">("visual");
   const [equationDraft, setEquationDraft] = useState<EquationDraft | null>(null);
   const [linkDraft, setLinkDraft] = useState<LinkDraft | null>(null);
@@ -313,8 +310,8 @@ export function MarkdownTiptapEditor({
     const tr = state.tr;
     let changed = false;
     state.doc.descendants((node, pos) => {
-      if (node.type.name === "citation" && String(node.attrs.id || "") === fromKey) {
-        tr.setNodeMarkup(pos, undefined, { ...node.attrs, id: toKey });
+      if (node.type.name === "citation" && citationKeys(String(node.attrs.id || "")).includes(fromKey)) {
+        tr.setNodeMarkup(pos, undefined, { ...node.attrs, id: citationKeys(String(node.attrs.id || "")).map((id) => id === fromKey ? toKey : id).join("; @") });
         changed = true;
       }
     });
@@ -778,6 +775,8 @@ export function MarkdownTiptapEditor({
 
           const display = (node: ProsemirrorNode) => {
             const id = String(node.attrs.id || "");
+            const keys = citationKeys(id);
+            if (keys.length > 1) return formatCitationGroup(keys, referenceMapRef.current, citationStyleRef.current, citationOrderRef.current);
             const reference = referenceMapRef.current.get(id);
             if (!reference) return `[@${id}]`;
             const index = citationOrderRef.current.indexOf(id);
@@ -867,7 +866,10 @@ export function MarkdownTiptapEditor({
       },
       handleKeyDown: (view, event) => {
         if (event.key === "Backspace" || event.key === "Delete") {
-          const selection = view.state.selection as any;
+          const selection = view.state.selection as typeof view.state.selection & {
+            isColSelection?: () => boolean;
+            isRowSelection?: () => boolean;
+          };
           if (selection && typeof selection.isColSelection === "function" && selection.isColSelection()) {
             event.preventDefault();
             editorRef.current?.chain().focus().deleteColumn().run();
@@ -1070,7 +1072,7 @@ export function MarkdownTiptapEditor({
       citationOrderRef.current = ids;
       setCitationOrder(ids);
     }, 0);
-  }, [editor, markdown]);
+  }, [editor, markdown, documentDefaults.citationStyle]);
 
   const showVisualEditor = () => {
     const metadata = splitBibliographyMetadataWithRepair(markdown);
@@ -1287,7 +1289,7 @@ export function MarkdownTiptapEditor({
         mode={editingReference ? "edit" : "preview"}
         projectId={projectId}
         initialDraft={editingReference ? draftFromBibtexEntry(editingReference) : undefined}
-        reference={viewingReference ? draftFromBibtexEntry(viewingReference) as any : undefined}
+        reference={viewingReference ? draftFromBibtexEntry(viewingReference) : undefined}
         requireKey
         saving={savingReference}
         onCancelEdit={() => setEditingReference(null)}
@@ -1419,8 +1421,9 @@ function citationIds(editor: Editor) {
   const ids: string[] = [];
   editor.state.doc.descendants((node) => {
     if (node.type.name === "citation") {
-      const id = String(node.attrs.id || "");
-      if (id && !ids.includes(id)) ids.push(id);
+      for (const id of citationKeys(String(node.attrs.id || ""))) {
+        if (!ids.includes(id)) ids.push(id);
+      }
     }
   });
   return ids;

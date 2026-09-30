@@ -9,6 +9,7 @@ allowBuilds:
   protobufjs: true
   sharp: false
   tesseract.js: false
+  unrs-resolver: set this to true or false
 
 overrides:
   '@vercel/eve-catalog': npm:picocolors@1.1.1

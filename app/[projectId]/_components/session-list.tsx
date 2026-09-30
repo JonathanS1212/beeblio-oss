@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { SessionItem } from "./session-item";
 import { getProjectSessions } from "../actions";
 
+export type ProjectSession = Awaited<ReturnType<typeof getProjectSessions>>[number];
+
 export function SessionList({
   projectId,
   initialSessions,
@@ -12,7 +14,7 @@ export function SessionList({
   onDeleteConversation,
 }: {
   projectId: string;
-  initialSessions: any[];
+  initialSessions: ProjectSession[];
   query: string;
   onSelectConversation: (sessionId: string) => void;
   onDeleteConversation: (sessionId: string) => void;

@@ -148,7 +148,7 @@ export default defineTool({
       ? `/workspace/${outputWorkspacePath}`
       : undefined;
 
-    const probedDurationSeconds = await probeAudioDuration(ctx, identity, resolvedPath);
+    const probedDurationSeconds = await probeAudioDuration(ctx, resolvedPath);
     const { content: audio } = await readWorkspaceFile(
       identity.userId,
       identity.projectSlug,
@@ -671,7 +671,6 @@ function sleep(
 
 async function probeAudioDuration(
   ctx: ToolContext,
-  identity: { userId: string; projectSlug: string },
   resolvedPath: string,
 ): Promise<number | null> {
   try {

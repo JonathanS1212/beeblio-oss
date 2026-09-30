@@ -24,7 +24,6 @@ import {
   createSaveToken,
   literatureItemSchema,
   verifySaveToken,
-  type ValidLiteratureItem,
 } from "@/lib/literature/save-token";
 import { lookupLiteratureMetrics, searchLiteratureProviders } from "@/lib/literature/search";
 import { LITERATURE_SOURCES } from "@/lib/literature/types";
@@ -70,7 +69,6 @@ const metricsInputSchema = z.object({
   dois: z.array(z.string().trim().min(4).max(500)).min(1).max(10),
 });
 
-type LiteratureIdentity = z.infer<typeof literatureIdentitySchema>;
 
 const LITERATURE_PDF_MAX_REDIRECTS = integerEnv("LITERATURE_PDF_MAX_REDIRECTS", 5, 0);
 const LITERATURE_PDF_TIMEOUT_MS = integerEnv("LITERATURE_PDF_TIMEOUT_MS", 30_000, 1_000);

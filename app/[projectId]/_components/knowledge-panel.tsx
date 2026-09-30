@@ -18,7 +18,6 @@ import { getWorkspaceDragPaths } from "@/lib/workspace-drag";
 import { uploadWorkspaceFile } from "@/lib/workspace-upload";
 import { addFileToKnowledge, listKnowledgeDocuments, removeFileFromKnowledge, searchKnowledge } from "../knowledge-actions";
 import { listAllFiles, type FileEntry } from "../file-actions";
-import { notifyUpcomingFeature } from "./upcoming-feature";
 
 type KnowledgePanelSnapshot = {
   documents: KnowledgeDocumentDTO[];

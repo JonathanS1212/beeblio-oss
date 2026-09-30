@@ -234,7 +234,7 @@ export function EditorShell({
       window.removeEventListener(WORKSPACE_CHANGED_EVENT, checkForUpdate);
       window.removeEventListener("beeblio:workspace-file-reloaded", markReloaded);
     };
-  }, [path, sourceUrl]);
+  }, [path, sourceUrl, projectId]);
 
   const reloadUpdatedFile = useCallback(() => {
     setSyncState("reloading");
@@ -351,14 +351,14 @@ export function EditorShell({
             {isPublicRoute && isOwner && projectSlug && filePath ? (
               <>
                 <span className="mx-0.5 h-5 w-px shrink-0 self-center bg-border" />
-                <Button size="sm" onClick={() => { window.location.href = `/${projectSlug}?file=${encodeURIComponent(filePath)}`; }}>
+                <Button size="sm" onClick={() => { window.location.assign(new URL(`/${projectSlug}?file=${encodeURIComponent(filePath)}`, window.location.origin)); }}>
                   <Pencil />Edit
                 </Button>
               </>
             ) : isPublicRoute && !isOwner && shareId ? (
               <>
                 <span className="mx-0.5 h-5 w-px shrink-0 self-center bg-border" />
-                <CopyToWorkspaceButton shareId={shareId} filePath={path} />
+                <CopyToWorkspaceButton shareId={shareId} />
               </>
             ) : null}
             {showSaveGroup && (

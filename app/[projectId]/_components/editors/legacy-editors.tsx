@@ -67,10 +67,9 @@ function countWords(markdown: string): number {
 export function ImageViewer({ file, sourceUrl }: WorkspaceEditorProps) {
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>();
   const [loaded, setLoaded] = useState(false);
-  const label = extensionOf(file.name).toUpperCase() || "Image";
   return <EditorShell path={file.path} sourceUrl={sourceUrl} openUrl={sourceUrl} status={dimensions ? <span className="text-xs text-muted-foreground">
     {/* {label} ·  */}
-  Res. {dimensions.width.toLocaleString()} × {dimensions.height.toLocaleString()}</span> : undefined}><div className="relative flex h-full items-center justify-center p-4">{!loaded ? <div className="absolute inset-0 z-10"><EditorLoading name={file.name} size={file.size} /></div> : null}{/* eslint-disable-next-line @next/next/no-img-element */}<img src={sourceUrl} alt={file.name} onLoad={(event) => { setLoaded(true); setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }); }} onError={() => setLoaded(true)} className="max-h-full max-w-full object-contain" /></div></EditorShell>;
+  Res. {dimensions.width.toLocaleString()} × {dimensions.height.toLocaleString()}</span> : undefined}><div className="relative flex h-full items-center justify-center p-4">{!loaded ? <div className="absolute inset-0 z-10"><EditorLoading name={file.name} size={file.size} /></div> : null}<img src={sourceUrl} alt={file.name} onLoad={(event) => { setLoaded(true); setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }); }} onError={() => setLoaded(true)} className="max-h-full max-w-full object-contain" /></div></EditorShell>;
 }
 
 export function UnsupportedViewer({ file, sourceUrl }: WorkspaceEditorProps) {

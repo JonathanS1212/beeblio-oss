@@ -36,7 +36,6 @@ import { getFileContent, listFiles, type FileEntry } from "../../file-actions";
 import { uploadWorkspaceFile } from "@/lib/workspace-upload";
 import { fileUrl } from "../file-viewer";
 import { workspacePathRelativeToDocument } from "./markdown-image-path";
-import { notifyUpcomingFeature } from "../upcoming-feature";
 import {
   DIAGRAM_EXTENSIONS, IMAGE_EXTENSIONS, UPLOADABLE_VISUAL_ACCEPT, isDiagramFile, isUploadableVisualName, isVisualFile,
 } from "./tiptap-markdown-extensions";
@@ -1140,7 +1139,7 @@ export function FigureToolbar({ editor }: { editor: Editor }) {
       window.removeEventListener("scroll", update, { capture: true } as EventListenerOptions);
       window.removeEventListener("resize", update);
     };
-  }, [editor, selected?.pos]);
+  }, [editor, selected]);
 
   const moveSelectedFigure = (direction: 1 | -1) => {
     if (!selected) return;

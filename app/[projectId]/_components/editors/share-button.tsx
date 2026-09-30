@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getPublicFileStatus, setFilePublic } from "../../share-actions";
-import { notifyUpcomingFeature } from "../upcoming-feature";
 
 export function ShareButton({ projectId, filePath }: { projectId: string; filePath: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,7 +41,7 @@ export function ShareButton({ projectId, filePath }: { projectId: string; filePa
       } else {
         toast.success("File is now private");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to update sharing status");
       setIsPublic(!checked);
     } finally {

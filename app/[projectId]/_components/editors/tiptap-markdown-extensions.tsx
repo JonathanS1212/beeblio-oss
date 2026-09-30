@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SELECTION_ANCHOR_MAX_CHARS, SELECTION_MAX_CHARS, type SelectionRange } from "@/lib/chat-context";
 import { cn } from "@/lib/utils";
-import { formatCitation, supportsNarrativeCitation, type CitationMode, type CitationReference, type CitationStyle } from "@/lib/citations";
+import { citationKeys, formatCitation, supportsNarrativeCitation, type CitationMode, type CitationReference, type CitationStyle } from "@/lib/citations";
 import type { LiteratureMetrics } from "@/lib/literature/types";
 import { citationModeFromSuffix, CITATION_TOKEN_SUFFIX_SOURCE } from "@/lib/markdown-bibliography";
 import type { FileEntry } from "../../file-actions";
@@ -435,7 +435,7 @@ export function documentSelectionAt(editor: Editor, from: number, to: number): D
   return { text: text.slice(0, SELECTION_MAX_CHARS), range: { from, to }, ...selectionAnchors(doc, from, to) };
 }
 
-const CITATION_TOKEN_SOURCE = new RegExp(String.raw`^\[@([A-Za-z0-9_:.-]+)\](${CITATION_TOKEN_SUFFIX_SOURCE})`);
+const CITATION_TOKEN_SOURCE = new RegExp(String.raw`^\[@([A-Za-z0-9_:.-]+(?:\s*;\s*@[A-Za-z0-9_:.-]+)*)\](${CITATION_TOKEN_SUFFIX_SOURCE})`);
 
 // The markdown serializer closes text-style marks around inline atoms, so a
 // citation's font family/size would be dropped on the next markdown
@@ -524,8 +524,9 @@ function CitationNodeView({ node, selected, updateAttributes }: NodeViewProps) {
   const [open, setOpen] = useState(false);
   const { references, style, order, loading, onEditReference, onViewReference, fetchMetrics } = useContext(CitationContext);
   const id = String(node.attrs.id || "");
+  const ids = citationKeys(id);
   const number = Math.max(1, order.indexOf(id) + 1);
-  const reference = references.get(id);
+  const reference = references.get(ids[0]);
   const mode: CitationMode = node.attrs.mode === "narrative" ? "narrative" : "default";
   const narrativeAvailable = supportsNarrativeCitation(style);
   // Attrs are the persisted source (they survive the markdown round-trip);
@@ -550,6 +551,31 @@ function CitationNodeView({ node, selected, updateAttributes }: NodeViewProps) {
       </NodeViewWrapper>
     );
   }
+  if (ids.length > 1) {
+    const bracket = style === "ieee" ? ["[", "]"] : ["(", ")"];
+    return (
+      <NodeViewWrapper as="span">
+        <span contentEditable={false} style={fontStyle}>
+          {bracket[0]}
+          {ids.map((key, index) => (
+            <span key={`${key}-${index}`}>
+              {index > 0 ? "; " : null}
+              <CitationGroupItem
+                id={key}
+                reference={references.get(key)}
+                style={style}
+                number={Math.max(1, order.indexOf(key) + 1)}
+                onEdit={onEditReference}
+                onView={onViewReference}
+                fetchMetrics={fetchMetrics}
+              />
+            </span>
+          ))}
+          {bracket[1]}
+        </span>
+      </NodeViewWrapper>
+    );
+  }
   return (
     <NodeViewWrapper as="span">
       <Popover open={open} onOpenChange={setOpen}>
@@ -566,7 +592,7 @@ function CitationNodeView({ node, selected, updateAttributes }: NodeViewProps) {
         {reference ? (
           <CitationDetailsPopover
             reference={reference}
-            citationId={id}
+            citationId={ids[0]}
             open={open}
             mode={mode}
             narrativeAvailable={narrativeAvailable}
@@ -579,6 +605,46 @@ function CitationNodeView({ node, selected, updateAttributes }: NodeViewProps) {
         ) : null}
       </Popover>
     </NodeViewWrapper>
+  );
+}
+
+function CitationGroupItem({ id, reference, style, number, onEdit, onView, fetchMetrics }: {
+  id: string;
+  reference?: CitationReference;
+  style: CitationStyle;
+  number: number;
+  onEdit?: (id: string) => void;
+  onView?: (id: string) => void;
+  fetchMetrics?: (dois: string[]) => Promise<LiteratureMetrics[]>;
+}) {
+  const [open, setOpen] = useState(false);
+  const label = reference ? formatCitation(reference, style, number).slice(1, -1) : `@${id}`;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <span
+          className={cn("beeblio-citation cursor-pointer", open && "is-selected", !reference && "is-missing")}
+          title={reference ? `@${id}: ${reference.title}` : `Missing reference: @${id}`}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          {label}
+        </span>
+      </PopoverTrigger>
+      {reference ? (
+        <CitationDetailsPopover
+          reference={reference}
+          citationId={id}
+          open={open}
+          mode="default"
+          narrativeAvailable={false}
+          onModeChange={() => {}}
+          onEdit={onEdit}
+          onView={onView}
+          fetchMetrics={fetchMetrics}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
+    </Popover>
   );
 }
 
