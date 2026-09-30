@@ -1,12 +1,8 @@
 # Beeblio
 
-Beeblio is a local AI research workspace. Its Next.js interface and Eve agent run on your computer, and each project points to an existing folder. Beeblio reads and edits that folder directly; linking a project does not copy or upload its files.
+Beeblio is a full-stack AI research workspace. It collaborates with you and works directly in your folders & documents. The Next.js interface and Eve agent run locally on your computer, and each project points to an existing folder.
 
-This is an early local-first release. It is intended for a single trusted user on one computer. Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Please report security issues as described in [SECURITY.md](SECURITY.md).
-
-## License
-
-Beeblio is **source available** under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). Personal and other noncommercial use is permitted; commercial use requires separate permission from the copyright holder. This is not an OSI-approved open-source license. Third-party dependencies retain their own licenses.
+This is intended for a single trusted user on one computer.
 
 ## Requirements
 
@@ -28,7 +24,7 @@ pnpm dev
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The root URL redirects to `/workspace`. `pnpm dev` creates `.beeblio/` if needed, applies SQLite migrations, and starts both the Next.js UI and the Eve agent. They listen on `127.0.0.1:3000` and `127.0.0.1:2000` respectively.
 
-Choose **Link Project Folder** to select a folder. You can also paste its absolute path. Beeblio stores the resolved path in SQLite and works with the files in place. On linking, it adds any missing `1-References/`, `2-Data/`, `3-Analysis/`, and `4-Reports/` folders, plus `1-References/references.bib` and `3-Analysis/literature-matrix.matrix`. Existing files are preserved. Agent file tools display the folder as `/workspace`; agent shell commands run on your computer with that folder as the working directory. `$BEEBLIO_PROJECT_DIR` contains its absolute path.
+Choose **Link Project Folder** to select a folder. You can also paste its absolute path. Beeblio stores the resolved path in SQLite and works with the files in place. On linking, it adds any missing canonical files & folders: `1-References/`, `2-Data/`, `3-Analysis/`, and `4-Reports/` folders, plus `1-References/references.bib` and `3-Analysis/literature-matrix.matrix`. Existing files are preserved. Agent file tools display the folder as `/workspace`; agent shell commands run on your computer with that folder as the working directory. `$BEEBLIO_PROJECT_DIR` contains its absolute path.
 
 ## Configuration
 
@@ -44,20 +40,20 @@ The main agent needs `OPENROUTER_API_KEY`, `OPENROUTER_MODEL_ID`, and `OPENROUTE
 | `MONID_API_KEY`, `BRAVE_SEARCH_API_KEY` | Optional research and web tools |
 | `CROSSREF_MAILTO` | Contact address for scholarly metadata requests |
 
-The application has one local user and no browser login, accounts, credits, billing, or entitlement checks. Keep the servers bound to loopback: the agent's Bash tool uses your computer's own environment and can access files outside a project folder through shell commands.
+The application has one local user and no browser login or accounts checks. Keep the servers bound to loopback: the agent's Bash tool uses your computer's own environment and can access files outside a project folder through shell commands.
 
 ## Where data lives
 
 - **Project files:** Your linked folders. Browser uploads, downloads, and agent file operations use local filesystem routes.
 - **Application data:** `.beeblio/beeblio.sqlite` stores projects, conversation state, knowledge metadata, and share records. Schema migrations are in [`drizzle/`](./drizzle/).
 - **Internal secret:** `.beeblio/agent-secret` is generated automatically for the local UI-to-agent connection.
-- **Agent compute:** Eve runs Bash and Python on the host. No Docker image, Blaxel job, compute server, or separate database server is required. The bundled `beeblio_research` Python helper is available to agent commands; other Python packages come from your local environment.
+- **Agent compute:** Eve runs Bash and Python on the host. No Docker image or separate database server is required. The bundled `beeblio_research` Python helper is available to agent commands; other Python packages come from your local environment.
 
 Beeblio still calls external model and research APIs when those features are used. Back up both your project folders and `.beeblio/` if you need to preserve files and conversation history.
 
 ## Documents
 
-The Markdown editor can export DOCX, DOCX with Mendeley or Zotero citations, LaTeX, and portable Markdown. Direct PDF export and its Gotenberg service have been removed. To make a PDF, export DOCX and convert it with your local document software. Legacy Office previews use local LibreOffice when available.
+The Markdown editor can export DOCX, DOCX with Mendeley or Zotero citations, LaTeX, and portable Markdown. To make a PDF, export DOCX and convert it with your local document software or ask the agent to do it with a conversion script. Legacy Office previews use local LibreOffice when available.
 
 ## Development commands
 
