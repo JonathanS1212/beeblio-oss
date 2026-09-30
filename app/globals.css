@@ -302,6 +302,14 @@ body.workspace-fullscreen {
   list-style-type: circle !important;
 }
 
+/* Source excerpts use small text; Streamdown's heading sizes otherwise dwarf it. */
+.knowledge-source-markdown :is(h1, h2, h3, h4, h5, h6) {
+  margin-block: 0.35rem 0.15rem;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 600;
+}
+
 /* User messages sit inside a rounded, overflow-clipped bubble, so native
    outside markers can disappear. Reserve an in-bubble marker column instead:
    the marker remains visible and wrapped lines share the first line's text

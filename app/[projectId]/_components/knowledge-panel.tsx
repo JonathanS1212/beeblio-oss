@@ -5,6 +5,7 @@ import { ArrowLeft, BookMarked, ChevronDown, FileText, Loader2, Plus, RefreshCw,
 import { toast } from "sonner";
 
 import { MessageResponse } from "@/components/ai-elements/message";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,6 +46,7 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string>();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [documentToRemove, setDocumentToRemove] = useState<KnowledgeDocumentDTO | null>(null);
   const [loading, setLoading] = useState(() => !cachedSnapshot);
   const [busyPaths, setBusyPaths] = useState<Set<string>>(() => new Set());
   const [isDragging, setIsDragging] = useState(false);
@@ -147,6 +149,7 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
         knowledgePanelCache.set(projectId, { documents: next, files });
         return next;
       });
+      setDocumentToRemove(null);
       toast.success("File removed from Knowledge");
       window.dispatchEvent(new CustomEvent("beeblio:knowledge-changed"));
     } catch (error) {
@@ -209,7 +212,7 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
                 <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-red-500/10 text-red-600"><FileText className="size-4" /></span>
                 <span className="min-w-0"><span className="block truncate text-xs font-medium">{document.displayName}</span><span className="block truncate text-[10px] text-muted-foreground">{document.filePath} · {bytes(document.sizeBytes)}</span>{document.citationKey ? <span className="block truncate font-mono text-[10px] text-muted-foreground">[@{document.citationKey}]</span> : null}<span className={cn("mt-1 block text-[10px]", document.status === "ready" ? "text-emerald-600" : document.status === "failed" ? "text-destructive" : "text-amber-600")}>{document.status === "ready" ? "Ready" : document.status === "failed" ? document.error || "Processing failed" : document.status === "removing" ? "Removing…" : "Processing…"}</span></span>
               </button>
-              <Button size="icon-xs" variant="ghost" disabled={busy} onClick={() => void remove(document)} aria-label={`Remove ${document.displayName} from Knowledge`}>{busy ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button>
+              <Button size="icon-xs" variant="ghost" disabled={busy} onClick={() => setDocumentToRemove(document)} aria-label={`Remove ${document.displayName} from Knowledge`}>{busy ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button>
             </div>
             {document.status === "failed" ? <Button size="xs" variant="ghost" className="mt-1 ml-9" disabled={busy} onClick={() => void add(document.filePath)}><RefreshCw />Retry</Button> : null}
           </div>;
@@ -222,6 +225,22 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
           <Plus />Add file</Button></div>}
     </div>
     <Dialog open={pickerOpen} onOpenChange={setPickerOpen}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Add to Knowledge</DialogTitle><DialogDescription>Select supported workspace files up to 100 MB. Added files process in the background.</DialogDescription></DialogHeader><div className="max-h-80 overflow-y-auto rounded-lg border p-1">{availableFiles.length ? availableFiles.map((file) => { const existing = documents.find((item) => item.filePath === file.path); const busy = busyPaths.has(file.path); return <button key={file.path} disabled={busy || file.size > KNOWLEDGE_MAX_FILE_BYTES} className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-muted disabled:opacity-45" onClick={() => void add(file.path)}><FileText className="size-4 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{file.name}</span><span className="block truncate text-[10px] text-muted-foreground">{file.path} · {bytes(file.size)}</span></span>{busy ? <Loader2 className="size-4 animate-spin" /> : existing ? <span className="text-[10px] text-muted-foreground">{existing.status === "ready" ? "Added" : existing.status}</span> : <Plus className="size-4" />}</button>; }) : <p className="p-6 text-center text-xs text-muted-foreground">No supported workspace files are available.</p>}</div><p className="text-[11px] text-muted-foreground">You can also drag workspace files here, or drop files from your computer to upload them into References and add them.</p><DialogFooter><Button variant="outline" onClick={() => setPickerOpen(false)}>Done</Button></DialogFooter></DialogContent></Dialog>
+    <AlertDialog open={documentToRemove !== null} onOpenChange={(open) => { if (!open && !busyPaths.has(documentToRemove?.filePath ?? "")) setDocumentToRemove(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove from Knowledge?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Remove <span className="font-medium text-foreground">{documentToRemove?.displayName}</span> from Knowledge? The file will remain in your project folder.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={documentToRemove ? busyPaths.has(documentToRemove.filePath) : false}>Cancel</AlertDialogCancel>
+          <Button variant="destructive" disabled={!documentToRemove || busyPaths.has(documentToRemove.filePath)} onClick={() => { if (documentToRemove) void remove(documentToRemove); }}>
+            {documentToRemove && busyPaths.has(documentToRemove.filePath) ? <Loader2 className="animate-spin" /> : null}Remove from Knowledge
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     {isDragging ? <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-background/90 text-center shadow-lg"><div><BookMarked className="mx-auto mb-2 size-6 text-primary" /><p className="text-sm font-medium">Add to Knowledge</p><p className="mt-1 text-xs text-muted-foreground">Drop supported files here</p></div></div> : null}
   </div>;
 }
@@ -258,7 +277,9 @@ function KnowledgeSearchResults({ result, files, onOpenFile, onClear }: { result
             <span className="flex items-center gap-2"><FileText className="size-3.5 shrink-0 text-primary" /><span className="min-w-0 flex-1 truncate text-xs font-medium">{citation.fileName}</span>{citation.citationKey ? <span className="shrink-0 font-mono text-[10px] text-muted-foreground">[@{citation.citationKey}]</span> : null}{citation.pageNumber ? <span className="shrink-0 text-[10px] text-muted-foreground">p. {citation.pageNumber}</span> : null}<ChevronDown className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" /></span>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <span className="mt-1.5 line-clamp-4 block border-l-2 border-primary/20 pl-2 text-[10px] leading-4 text-muted-foreground">{citation.excerpt}</span>
+            <div className="mt-1.5 border-l-2 border-primary/20 pl-2 text-[10px] leading-4 text-muted-foreground">
+              <MessageResponse className="knowledge-answer-markdown knowledge-source-markdown text-[10px] leading-4">{citation.excerpt}</MessageResponse>
+            </div>
           </CollapsibleContent>
         </Collapsible>;
       })}</div>
