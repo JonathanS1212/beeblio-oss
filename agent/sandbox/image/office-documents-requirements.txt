@@ -1,0 +1,9 @@
+# Office-document skills (agent/skills/{docx,pptx,xlsx}) Python dependencies,
+# installed into the same pinned venv as python-analysis-requirements.txt.
+# Runtime installs are blocked (no network + PIP_NO_INDEX), so every package
+# the skills import must be pinned here.
+defusedxml==0.7.1
+markitdown==0.1.7
+python-docx==1.2.0
+python-pptx==1.0.2
+xlsxwriter==3.2.9

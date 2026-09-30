@@ -1,0 +1,119 @@
+export const lastUpdated = "September 24, 2026"
+
+This policy explains what information Beeblio collects when you use the service, why we collect it, and the choices you have. It is written to be read, not skimmed past a checkbox.
+
+## Who we are
+
+Beeblio is an AI research workspace for students, researchers, and academic teams. When we say “we” or “Beeblio” in this policy, we mean the operator of the service at beeblio.org. You can reach us at any time at [mail@raihankalla.id](mailto:mail@raihankalla.id).
+
+## Information we collect
+
+### Information you give us
+
+When you create an account we collect your name and email address. If you contact us by email, we keep the correspondence. If you pay through our Indonesian payment provider, we also collect the mobile number you use for payment.
+
+### Research materials you upload
+
+The files you add to a project — datasets, spreadsheets, PDFs, codebooks, notes, and drafts — are stored in that project's workspace in cloud storage so your work persists between sessions. These materials are processed to provide the service: for example, to analyze a dataset, search a document, or answer a question about your sources.
+
+### Conversations and settings
+
+We store the conversations you have with the agent, including the tool calls, steps, and sources behind each result, so you can revisit and inspect them later. Project settings — your model preferences, and whether you have connected your own model key — are stored with the project.
+
+### Your own model keys
+
+Paid plans can connect your own OpenRouter API key. If you do, we store the key in encrypted form, decrypt it only to make requests on your behalf, never display it in full, and never fall back to our own key for that work. You can remove it at any time, which deletes it from our records.
+
+### Usage information
+
+We collect service-level information such as authentication events, feature usage, credit and billing records, and error logs. This tells us what is broken and what to improve. We do not sell this information, and we do not use it to build advertising profiles.
+
+### Payment information
+
+If you purchase a paid plan or credits, payment details are handled by our payment processors — Lemon Squeezy for global payments and Mayar for payments in Indonesia. We never see or store your full card number.
+
+## How we use information
+
+We use the information above to:
+
+- Provide the workspace: your account, projects, files, conversations, and exports.
+- Process your research requests, including AI-assisted analysis, literature work, and document drafting.
+- Index documents you add to a project so that you and the agent can search them.
+- Keep the service secure, debug problems, and prevent abuse.
+- Communicate with you about your account, service changes, and — only where you have opted in — product news.
+- Comply with legal obligations.
+
+## Where your work is processed
+
+Beeblio runs on a short, named list of providers. Knowing them matters if your work is governed by ethics review or a data-sharing agreement:
+
+- **Vercel** (United States) hosts the application and the agent service.
+- **Google Cloud** stores your workspace files. Google's Gemini API indexes documents you add to a project's knowledge base, answers searches over them, and transcribes audio you ask the agent to transcribe.
+- **Blaxel** (United States) runs the isolated compute environments where commands and analysis code execute.
+- **Neon** runs our Postgres database and manages sign-in.
+- **OpenRouter** routes model requests to the underlying model providers; which provider handles a request depends on the model.
+- **Microsoft's Office Online viewer** renders previews of Office documents: when you open a preview, Microsoft's servers fetch the document over a time-limited, access-controlled link.
+- Literature and web search queries go to academic and web search services, including OpenAlex, Crossref, and NCBI.
+- **Lemon Squeezy** and **Mayar** process payments.
+
+## AI processing and your research data
+
+Most work happens inside your isolated workspace: each account gets its own compute environment, and commands run with access to that account's files only. Requests that need a model reach the providers named above, and no further:
+
+- A task that can be completed inside your workspace is; only model-dependent steps are sent to a provider, with only the content needed to complete them.
+- We do not use your research materials to train models of our own, and we configure our provider accounts to avoid providers that would use your content for training.
+- If you connect your own OpenRouter key, model requests for that work are made with your key under your OpenRouter account, and OpenRouter bills that usage to you directly.
+- The tools, steps, and sources behind a result are kept available so you can inspect what was done.
+
+If your work is subject to ethics review, IRB terms, or a data-sharing agreement, you are responsible for confirming that processing it with Beeblio and the providers named above is permitted.
+
+## Public sharing and forms
+
+You can publish a file from your workspace as a public share link, or publish a form that collects responses into your workspace. Three things follow from that:
+
+- Anyone with the link can read the shared file and the images it references, or submit a response. No account is needed.
+- Form responses land in your workspace as data you control; we process them only to deliver and store them for you.
+- We keep brief rate-limiting information about where submissions come from (such as IP address) only long enough to prevent abuse, and we do not profile the people who respond to your forms.
+
+You are responsible for having a lawful basis to collect what your forms ask for.
+
+## Sharing your information
+
+We do not sell your personal information or your research materials. We share information only with:
+
+- **Service providers** — the named providers above, each bound to use information only on our instructions.
+- **Recipients of your share links** — anything you publish publicly is public.
+- **Law and safety** — where disclosure is required by law or necessary to protect the rights and safety of our users.
+
+Plans are individual today. If we introduce plans administered by a lab or other organization, we will update this policy before doing so.
+
+## Retention and deletion
+
+Your projects and their contents remain available as long as your account is active. You can delete files and projects yourself at any time. To delete your account, write to us and we will remove your account, projects, and workspace files — from production systems promptly and from backups within a reasonable period. Some records (such as invoices and security logs) may be kept longer where the law requires it.
+
+## Security
+
+We protect your work with encryption in transit and at rest, access controls on our internal systems, and isolation between accounts: each account's files and compute environment are separate from every other account's. Stored model keys are encrypted. No system is perfect. If a security incident ever affects your data, we will tell you clearly and promptly.
+
+## Your rights and choices
+
+Wherever you live, you can:
+
+- Access, correct, or export your personal information and research materials.
+- Delete files and projects yourself, and request deletion of your account and everything in it.
+- Remove a connected model key at any time.
+- Object to or restrict certain processing, and withdraw marketing consent at any time.
+
+If you are in the European Economic Area, the United Kingdom, or a jurisdiction with comparable law, you also have the right to lodge a complaint with a supervisory authority. To exercise any of these rights, email [mail@raihankalla.id](mailto:mail@raihankalla.id).
+
+## International data transfers
+
+Our infrastructure and the providers named above currently run in the United States. If you use Beeblio from another country, your information is transferred to the United States, and we use the safeguards available for that transfer, such as standard contractual clauses where they apply.
+
+## Changes to this policy
+
+If we make a material change to this policy, we will notify you in the service or by email before it takes effect. The date at the top of this page always reflects the current version.
+
+## Contact
+
+Questions about privacy? Write to us at [mail@raihankalla.id](mailto:mail@raihankalla.id). We are a small team, but a human reads what you send.

@@ -1,0 +1,8 @@
+type = "job"
+name = "beeblio-analysis"
+
+[runtime]
+memory = 2048
+maxConcurrentTasks = 10
+timeout = 720
+maxRetries = 0

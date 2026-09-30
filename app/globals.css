@@ -1,0 +1,2380 @@
+@import "tailwindcss";
+@import "@neondatabase/auth-ui/tailwind";
+@import "katex/dist/katex.min.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+@source "../node_modules/streamdown/dist/*.js";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand-warm: var(--brand-warm);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+}
+
+:root {
+  color-scheme: light;
+  /* Soft neutral page with white elevated surfaces so cards/composer pop. */
+  --background: oklch(0.975 0.008 88);
+  --foreground: oklch(0.235 0.02 250);
+  --card: oklch(0.995 0.004 88);
+  --card-foreground: oklch(0.235 0.02 250);
+  --popover: oklch(0.995 0.004 88);
+  --popover-foreground: oklch(0.235 0.02 250);
+  --primary: oklch(0.4 0.085 245);
+  --primary-foreground: oklch(0.985 0.006 88);
+  --secondary: oklch(0.935 0.018 91);
+  --secondary-foreground: oklch(0.28 0.035 250);
+  --muted: oklch(0.944 0.011 88);
+  --muted-foreground: oklch(0.52 0.026 240);
+  --accent: oklch(0.92 0.035 235);
+  --accent-foreground: oklch(0.28 0.055 245);
+  --brand-warm: oklch(0.72 0.14 65);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.882 0.017 91);
+  --input: oklch(0.875 0.018 91);
+  --ring: oklch(0.58 0.1 245);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.955 0.012 88);
+  --sidebar-foreground: oklch(0.27 0.025 250);
+  --sidebar-primary: oklch(0.4 0.085 245);
+  --sidebar-primary-foreground: oklch(0.985 0.006 88);
+  --sidebar-accent: oklch(0.92 0.03 235);
+  --sidebar-accent-foreground: oklch(0.28 0.05 245);
+  --sidebar-border: oklch(0.875 0.018 91);
+  --sidebar-ring: oklch(0.58 0.1 245);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.17 0.014 250);
+  --foreground: oklch(0.94 0.01 92);
+  --card: oklch(0.205 0.016 250);
+  --card-foreground: oklch(0.94 0.01 92);
+  --popover: oklch(0.215 0.017 250);
+  --popover-foreground: oklch(0.94 0.01 92);
+  --primary: oklch(0.72 0.09 240);
+  --primary-foreground: oklch(0.17 0.02 250);
+  --secondary: oklch(0.265 0.022 245);
+  --secondary-foreground: oklch(0.91 0.02 95);
+  --muted: oklch(0.255 0.015 250);
+  --muted-foreground: oklch(0.69 0.025 240);
+  --accent: oklch(0.29 0.035 240);
+  --accent-foreground: oklch(0.93 0.018 100);
+  --brand-warm: oklch(0.76 0.13 70);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(0.42 0.02 245 / 45%);
+  --input: oklch(0.45 0.025 245 / 55%);
+  --ring: oklch(0.68 0.09 240);
+}
+* {
+  border-color: var(--border);
+}
+
+html {
+  height: 100%;
+}
+
+/* Added by the marketing layout's SmoothScroll component so in-page anchor
+   links animate on marketing pages without changing workspace scrolling. */
+@media (prefers-reduced-motion: no-preference) {
+  html.marketing-smooth-scroll {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  background: var(--background);
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+}
+
+/* Set by ProjectLayoutUI while the project workspace shell is mounted: the
+   shell owns all scrolling inside its panels, so the document itself must
+   never pan or rubber-band (mobile browsers otherwise let it drift into blank
+   space around the fixed-height shell). */
+body.workspace-fullscreen {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Both properties must be explicit: with only a background set, Safari paints
+   selected text with its default white, which disappears on a light tint (e.g.
+   auth form inputs on the cream page background). Mixing primary into the
+   theme background keeps a soft tint that adapts to light/dark, while the
+   explicit foreground color guarantees readable contrast in both. */
+::selection {
+  background: color-mix(in oklab, var(--primary) 28%, var(--background));
+  color: var(--foreground);
+}
+
+@layer utilities {
+}
+
+.workspace-rail[data-expanded="true"] .workspace-rail-secondary {
+  height: 2.25rem;
+  width: 100%;
+  justify-content: flex-start;
+  padding-inline: 0.625rem;
+}
+
+.workspace-rail[data-expanded="true"] .workspace-rail-label {
+  display: inline;
+}
+
+/* Attention cue pointing at an already-open editor tab, e.g. when the
+   Bibliography rail button is clicked while references.bib is on screen. */
+@keyframes tab-attention {
+  0%, 100% {
+    background-color: var(--card);
+    box-shadow: 0 0 0 0 transparent;
+  }
+  35% {
+    background-color: color-mix(in oklab, var(--primary) 32%, var(--card));
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 60%, transparent);
+  }
+}
+
+@keyframes editor-attention {
+  0%, 100% { box-shadow: inset 0 0 0 0 transparent; }
+  30% { box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--primary) 55%, transparent); }
+}
+
+/* The active tab's concave bottom "feet" are pseudo-elements painted with a
+   var(--card) box-shadow. Mirror the tab-attention flash onto them so the
+   feet keep the same color as the flashing tab body. --tab-foot-x holds each
+   foot's horizontal shadow offset (4px for the left foot, -4px for the right). */
+@keyframes tab-attention-foot {
+  0%, 100% {
+    box-shadow: var(--tab-foot-x, 4px) 4px 0 4px var(--card);
+  }
+  35% {
+    box-shadow: var(--tab-foot-x, 4px) 4px 0 4px color-mix(in oklab, var(--primary) 32%, var(--card));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tab-attention {
+    animation: tab-attention 0.8s ease-in-out 3;
+  }
+  .tab-attention::before {
+    --tab-foot-x: 4px;
+    animation: tab-attention-foot 0.8s ease-in-out 3;
+  }
+  .tab-attention::after {
+    --tab-foot-x: -4px;
+    animation: tab-attention-foot 0.8s ease-in-out 3;
+  }
+  .editor-attention {
+    animation: editor-attention 0.8s ease-in-out 3;
+  }
+}
+
+/* Editor loading skeletons. The fade-in is delayed so loads that resolve in
+   ~120ms (cache hits, small files) never flash a placeholder at all; the
+   progress strip sweeps the media skeleton's transport bar. */
+@keyframes editor-skeleton-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes editor-skeleton-progress {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(410%);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .editor-skeleton {
+    animation: editor-skeleton-fade 160ms ease-out 120ms backwards;
+  }
+  .editor-skeleton-progress {
+    animation: editor-skeleton-progress 1.4s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-attention {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+  }
+  .editor-attention {
+    box-shadow: inset 0 0 0 3px var(--primary);
+  }
+}
+
+/* Scientific chat typography. Kept scoped so file previews can choose their own
+   document rhythm. */
+.agent-chat-markdown {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+/* Streamdown gives links the theme's primary color. In a primary-colored user
+   bubble that can make a bare URL disappear, so links should use the bubble's
+   inherited foreground color instead. */
+.is-user .agent-chat-markdown [data-streamdown="link"] {
+  color: inherit;
+  text-decoration-color: currentColor;
+  text-underline-offset: 0.18em;
+}
+
+/* File mention chips are anchors, unlike folder chips (buttons), so the
+   generic markdown-link color can make them disappear into a primary-colored
+   user bubble. Keep both chip variants on the bubble's foreground color. */
+.is-user .agent-chat-markdown a.workspace-mention-chip {
+  color: var(--primary-foreground) !important;
+}
+
+/* List rhythm shared by the chat and the Knowledge panel answer. Outside
+   markers create a true hanging indent: wrapped lines begin at the same
+   x-position as the first line of each list item. The Knowledge variant keeps
+   its own smaller type size and only opts into this rhythm. */
+:is(.agent-chat-markdown, .knowledge-answer-markdown) :is(ul, ol) {
+  margin-block: 0.45rem;
+  padding-inline-start: 1.4rem;
+  /* Streamdown ships `list-inside` as a utility on both list elements. */
+  list-style-position: outside !important;
+}
+
+:is(.agent-chat-markdown, .knowledge-answer-markdown) :is(ul, ol) :is(ul, ol) {
+  margin-block: 0.2rem;
+  padding-inline-start: 1.25rem;
+}
+
+:is(.agent-chat-markdown, .knowledge-answer-markdown) li {
+  margin-block: 0.12rem;
+  padding-block: 0.1rem !important;
+  padding-inline-start: 0.2rem;
+}
+
+:is(.agent-chat-markdown, .knowledge-answer-markdown) li::marker {
+  color: currentColor;
+  font-variant-numeric: tabular-nums;
+}
+
+:is(.agent-chat-markdown, .knowledge-answer-markdown) ul {
+  list-style-type: disc !important;
+}
+
+:is(.agent-chat-markdown, .knowledge-answer-markdown) ul ul {
+  list-style-type: circle !important;
+}
+
+/* User messages sit inside a rounded, overflow-clipped bubble, so native
+   outside markers can disappear. Reserve an in-bubble marker column instead:
+   the marker remains visible and wrapped lines share the first line's text
+   edge rather than starting beneath the marker. */
+.is-user .agent-chat-markdown :is(ul, ol) {
+  padding-inline-start: 0.25rem;
+  list-style: none !important;
+}
+
+.is-user .agent-chat-markdown :is(ul, ol) > li {
+  position: relative;
+  padding-inline-start: 1.5rem;
+}
+
+.is-user .agent-chat-markdown :is(ul, ol) > li::before {
+  position: absolute;
+  inset-block-start: 0.1rem;
+  inset-inline-start: 0;
+  width: 1.15rem;
+  color: var(--primary-foreground);
+  text-align: end;
+}
+
+.is-user .agent-chat-markdown ul > li::before {
+  content: "•";
+  text-align: center;
+}
+
+.is-user .agent-chat-markdown ol > li::before {
+  content: counter(list-item) ".";
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-chat-markdown :is(h1, h2, h3, h4, h5, h6) {
+  margin-block: 0.85rem 0.35rem;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.agent-chat-markdown a {
+  color: var(--primary);
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in oklab, var(--primary) 35%, transparent);
+  text-underline-offset: 0.2em;
+}
+
+.agent-chat-markdown blockquote {
+  border-inline-start-width: 2px;
+  border-inline-start-color: color-mix(in oklab, var(--primary) 45%, transparent);
+  padding-inline-start: 0.875rem;
+}
+
+.agent-chat-markdown .katex {
+  font-size: 1.04em;
+}
+
+.agent-chat-markdown .katex-display {
+  max-width: 100%;
+  margin-block: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.65rem 0.2rem;
+  scrollbar-width: thin;
+}
+
+.agent-chat-markdown .katex-display > .katex {
+  min-width: min-content;
+  text-align: center;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+.dark {
+  --sidebar: oklch(0.185 0.014 250);
+  --sidebar-foreground: oklch(0.94 0.01 92);
+  --sidebar-primary: oklch(0.72 0.09 240);
+  --sidebar-primary-foreground: oklch(0.17 0.02 250);
+  --sidebar-accent: oklch(0.27 0.03 240);
+  --sidebar-accent-foreground: oklch(0.93 0.018 100);
+  --sidebar-border: oklch(0.42 0.02 245 / 45%);
+  --sidebar-ring: oklch(0.68 0.09 240);
+}
+
+/* Micro animations & Academic Professional Styling */
+@layer utilities {
+  .animate-in {
+    animation-duration: 300ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-fill-mode: both;
+  }
+
+  .animate-out {
+    animation-duration: 250ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-fill-mode: both;
+  }
+
+  .slide-in-from-top-2 {
+    animation-name: slideInFromTop2;
+  }
+
+  .slide-in-from-bottom-2 {
+    animation-name: slideInFromBottom2;
+  }
+
+  .slide-in-from-right {
+    animation-name: slideInFromRight;
+  }
+
+  .slide-out-to-right {
+    animation-name: slideOutToRight;
+  }
+
+  .slide-in-from-left {
+    animation-name: slideInFromLeft;
+  }
+
+  .slide-out-to-left {
+    animation-name: slideOutToLeft;
+  }
+
+  .slide-in-from-top {
+    animation-name: slideInFromTop;
+  }
+
+  .slide-out-to-top {
+    animation-name: slideOutToTop;
+  }
+
+  .slide-in-from-bottom {
+    animation-name: slideInFromBottom;
+  }
+
+  .slide-out-to-bottom {
+    animation-name: slideOutToBottom;
+  }
+
+  .fade-in,
+  .fade-in-0 {
+    animation-name: fadeIn;
+  }
+
+  .fade-out,
+  .fade-out-0 {
+    animation-name: fadeOut;
+  }
+
+  .glass-panel {
+    @apply bg-background/75 backdrop-blur-xl border border-border shadow-sm;
+  }
+
+  .btn-hover-effect {
+    @apply transition-all duration-300 ease-out hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  [data-slot="sheet-overlay"][data-state="open"] {
+    animation: fadeIn 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  [data-slot="sheet-overlay"][data-state="closed"] {
+    animation: fadeOut 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  [data-slot="sheet-content"][data-side="right"][data-state="open"] {
+    animation: slideInFromRight 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  [data-slot="sheet-content"][data-side="right"][data-state="closed"] {
+    animation: slideOutToRight 250ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  [data-slot="sheet-content"][data-side="left"][data-state="open"] {
+    animation: slideInFromLeft 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  [data-slot="sheet-content"][data-side="left"][data-state="closed"] {
+    animation: slideOutToLeft 250ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  [data-slot="sheet-content"][data-side="top"][data-state="open"] {
+    animation: slideInFromTop 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  [data-slot="sheet-content"][data-side="top"][data-state="closed"] {
+    animation: slideOutToTop 250ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  [data-slot="sheet-content"][data-side="bottom"][data-state="open"] {
+    animation: slideInFromBottom 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  [data-slot="sheet-content"][data-side="bottom"][data-state="closed"] {
+    animation: slideOutToBottom 250ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes slideOutToRight {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes slideOutToLeft {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    transform: translate3d(0, -100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes slideOutToTop {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, -100%, 0);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes slideOutToBottom {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+@keyframes slideInFromTop2 {
+  from {
+    transform: translateY(-0.5rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom2 {
+  from {
+    transform: translateY(0.5rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Smooth transitions for links and buttons globally */
+a, button {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Scrollbar styling for a cleaner look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--muted-foreground);
+  border-radius: 10px;
+  opacity: 0.5;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--foreground);
+}
+
+.beeblio-mdx-editor .mdxeditor-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-wrap: nowrap;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--card);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.06);
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.beeblio-document-font-select {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.beeblio-document-font-select select {
+  height: 1.75rem;
+  width: 9.5rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--card);
+  padding: 0 1.75rem 0 0.5rem;
+  color: var(--foreground);
+  font: 500 0.75rem/1 var(--font-sans);
+  outline: none;
+}
+
+.beeblio-document-font-select select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 20%, transparent);
+}
+
+.beeblio-mdx-editor .mdxeditor-root-contenteditable {
+  min-height: calc(100dvh - 9rem);
+  background: color-mix(in oklab, var(--muted) 82%, var(--foreground) 5%);
+  padding: clamp(0.75rem, 3vw, 2rem) clamp(0.5rem, 2.5vw, 1.5rem) 3rem;
+  color: var(--foreground);
+}
+
+.beeblio-mdx-editor [contenteditable="true"].beeblio-document-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 816px;
+  min-height: 1056px;
+  margin: 0 auto;
+  border: 1px solid color-mix(in oklab, var(--border) 78%, transparent);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.08),
+    0 12px 32px rgb(15 23 42 / 0.12);
+  padding: 4.5rem 5.5rem !important;
+  color: var(--card-foreground);
+  font-family: var(--beeblio-document-font, Arial, Helvetica, sans-serif);
+  overflow-wrap: anywhere;
+}
+
+.beeblio-mdx-editor .beeblio-document-page:not([contenteditable="true"]) {
+  top: clamp(0.75rem, 3vw, 2rem);
+  left: 50%;
+  width: min(816px, calc(100% - clamp(1rem, 5vw, 3rem)));
+  transform: translateX(-50%);
+  padding: 4.5rem 5.5rem !important;
+  font-family: var(--beeblio-document-font, Arial, Helvetica, sans-serif);
+}
+
+.beeblio-mdx-editor .beeblio-document-page img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.5rem auto;
+  object-fit: contain;
+}
+
+.beeblio-mdx-editor .beeblio-document-page [data-editor-block-type="image"] {
+  max-width: 100%;
+}
+
+.beeblio-mdx-editor .beeblio-document-page table {
+  width: 100%;
+  margin: 1.25rem 0;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.beeblio-mdx-editor .beeblio-document-page :is(th, td) {
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.beeblio-mdx-editor .beeblio-document-page th {
+  background: var(--muted);
+  font-weight: 650;
+}
+
+@media (max-width: 640px) {
+  .beeblio-document-font-select select {
+    width: 8rem;
+  }
+
+  .beeblio-mdx-editor .mdxeditor-root-contenteditable {
+    padding: 0.5rem 0.375rem 1.5rem;
+  }
+
+  .beeblio-mdx-editor [contenteditable="true"].beeblio-document-page {
+    min-height: calc(100dvh - 10rem);
+    padding: 2rem 1.5rem !important;
+  }
+
+  .beeblio-mdx-editor .beeblio-document-page:not([contenteditable="true"]) {
+    top: 0.5rem;
+    width: calc(100% - 0.75rem);
+    padding: 2rem 1.5rem !important;
+  }
+}
+
+.beeblio-mdx-editor .mdxeditor-root-contenteditable h1,
+.beeblio-mdx-editor .mdxeditor-rich-text-editor h1 {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.beeblio-mdx-editor .mdxeditor-root-contenteditable h2,
+.beeblio-mdx-editor .mdxeditor-rich-text-editor h2 {
+  margin: 1.35rem 0 0.65rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+.beeblio-mdx-editor .mdxeditor-root-contenteditable h3,
+.beeblio-mdx-editor .mdxeditor-rich-text-editor h3 {
+  margin: 1.15rem 0 0.55rem;
+  font-size: 1.2rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.beeblio-mdx-editor .mdxeditor-root-contenteditable p,
+.beeblio-mdx-editor .mdxeditor-rich-text-editor p {
+  margin: 0.65rem 0;
+  line-height: 1.7;
+}
+
+.beeblio-mdx-editor .mdxeditor-root-contenteditable ul,
+.beeblio-mdx-editor .mdxeditor-root-contenteditable ol,
+.beeblio-mdx-editor .mdxeditor-rich-text-editor ul,
+.beeblio-mdx-editor .mdxeditor-rich-text-editor ol {
+  margin: 0.75rem 0;
+  padding-left: 1.75rem;
+}
+
+.beeblio-mdx-editor .mdxeditor-root-contenteditable ul,
+.beeblio-mdx-editor .mdxeditor-rich-text-editor ul {
+  list-style: disc;
+}
+
+.beeblio-mdx-editor .mdxeditor-root-contenteditable ol,
+.beeblio-mdx-editor .mdxeditor-rich-text-editor ol {
+  list-style: decimal;
+}
+
+.beeblio-mdx-editor .mdxeditor-root-contenteditable blockquote,
+.beeblio-mdx-editor .mdxeditor-rich-text-editor blockquote {
+  margin: 1rem 0;
+  border-left: 3px solid var(--border);
+  padding-left: 1rem;
+  color: var(--muted-foreground);
+}
+
+/* Tiptap document editors. The toolbar and page are intentionally scoped so
+   embedded editors elsewhere in the app keep their own layout. */
+.beeblio-tiptap-toolbar {
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.06);
+}
+
+.beeblio-tiptap-select {
+  height: 2rem;
+  flex: 0 0 auto;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--card);
+  padding: 0 1.6rem 0 0.5rem;
+  color: var(--foreground);
+  font: 500 0.75rem/1 var(--font-sans);
+  outline: none;
+}
+
+.beeblio-tiptap-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 18%, transparent);
+}
+
+.beeblio-tiptap-color {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  cursor: pointer;
+  place-items: center;
+  border-radius: 0.375rem;
+}
+
+.beeblio-tiptap-color:hover {
+  background: var(--accent);
+}
+
+.beeblio-tiptap-color input {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.beeblio-tiptap-document-surface {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 816px;
+  min-height: 1056px;
+  margin: 0 auto;
+  border: 1px solid color-mix(in oklab, var(--border) 78%, transparent);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.08),
+    0 12px 32px rgb(15 23 42 / 0.12);
+  color: var(--card-foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* TipTap stores inline font choices as portable document names. Resolve the
+   names at render time so machines without Microsoft/Garamond system fonts do
+   not fall through to the browser's Times-style default. These also repair
+   documents whose inline font marks were saved before web fallbacks existed. */
+.beeblio-tiptap-document-surface [style*="font-family: Aptos"] {
+  font-family: Aptos, var(--font-geist-sans), "Segoe UI", Arial, sans-serif !important;
+}
+
+.beeblio-tiptap-document-surface [style*="font-family: Calibri"] {
+  font-family: Calibri, var(--font-office-sans), Carlito, "Segoe UI", Arial, sans-serif !important;
+}
+
+.beeblio-tiptap-document-surface [style*="font-family: Garamond"] {
+  font-family: Garamond, var(--font-garamond), "EB Garamond", Georgia, serif !important;
+}
+
+.beeblio-tiptap-editor {
+  container-type: inline-size;
+}
+
+.beeblio-tiptap-editor .tiptap {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 1056px;
+  padding: 4.5rem 5.5rem;
+  color: inherit;
+  font: inherit;
+  overflow-wrap: anywhere;
+  outline: none;
+}
+
+.beeblio-tiptap-document-surface:focus-within {
+  border-color: color-mix(in oklab, var(--ring) 45%, var(--border));
+}
+
+.beeblio-citation {
+  display: inline;
+  cursor: default;
+  border-radius: 0.25rem;
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  padding: 0.08rem 0.22rem;
+  color: color-mix(in oklab, var(--primary) 82%, var(--foreground));
+  white-space: nowrap;
+}
+
+.beeblio-citation.is-selected {
+  outline: 2px solid color-mix(in oklab, var(--ring) 50%, transparent);
+}
+
+.beeblio-citation.is-missing {
+  background: color-mix(in oklab, var(--destructive) 10%, transparent);
+  color: var(--destructive);
+}
+
+/* Placeholder shown while references.bib loads, before a citation can be
+   resolved or declared missing. */
+.beeblio-citation.is-loading {
+  cursor: default;
+  background: color-mix(in oklab, var(--muted-foreground) 10%, transparent);
+}
+
+.beeblio-citation-skeleton {
+  display: inline-block;
+  height: 0.65em;
+  border-radius: 9999px;
+  vertical-align: -0.02em;
+  background: color-mix(in oklab, var(--muted-foreground) 40%, transparent);
+}
+
+.beeblio-mention-query {
+  display: inline;
+  border-radius: 0.25rem;
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  color: color-mix(in oklab, var(--primary) 85%, var(--foreground));
+  outline: none !important;
+  outline-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0.08rem 0.24rem;
+  margin: 0 0.02rem;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  caret-color: color-mix(in oklab, var(--primary) 85%, var(--foreground));
+}
+
+/* Jenni-style inline sentence suggestion: greyed ghost text right of the
+   caret, with a floating "Tab to Accept" chip above its first line. */
+.beeblio-suggestion-ghost {
+  position: relative;
+  display: inline;
+  color: color-mix(in oklab, var(--muted-foreground) 72%, transparent);
+  white-space: pre-wrap;
+}
+
+.beeblio-suggestion-citation {
+  display: inline;
+  border-radius: 0.25rem;
+  padding: 0.08rem 0.22rem;
+  background: color-mix(in oklab, var(--muted-foreground) 12%, transparent);
+  white-space: nowrap;
+}
+
+.beeblio-suggestion-chip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 3px);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.12);
+  cursor: pointer;
+  user-select: none;
+  animation: beeblio-ask-pop 120ms ease-out;
+}
+
+.beeblio-suggestion-chip:hover {
+  background: var(--accent);
+}
+
+.beeblio-suggestion-chip kbd {
+  display: inline-block;
+  padding: 0 0.32rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* The orange stem and sparkle identify an AI suggestion in progress. Hide the
+   native caret in the owning block so the cue has one clear anchor. */
+.beeblio-suggestion-processing {
+  position: relative;
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  margin-left: -1px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background: var(--brand-warm);
+  pointer-events: none;
+}
+
+.beeblio-suggestion-processing::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: -13px;
+  left: 50%;
+  width: 15px;
+  height: 15px;
+  background: var(--brand-warm);
+  clip-path: polygon(50% 0, 61% 36%, 100% 50%, 61% 64%, 50% 100%, 39% 64%, 0 50%, 39% 36%);
+  transform: translateX(-50%);
+  animation: beeblio-suggestion-sparkle 1.1s ease-in-out infinite;
+}
+
+.beeblio-tiptap-editor .tiptap :is(p, h1, h2, h3, h4, h5, h6):has(.beeblio-suggestion-processing) {
+  caret-color: transparent;
+}
+
+@keyframes beeblio-suggestion-sparkle {
+  0%, 100% { opacity: 0.75; transform: translateX(-50%) scale(0.85); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beeblio-suggestion-processing::before {
+    animation: none;
+  }
+}
+
+.beeblio-mention-menu {
+  position: fixed;
+  z-index: 80;
+  width: min(21rem, calc(100vw - 1rem));
+  /* Sections scroll individually; this bounds the whole menu (e.g. with the
+     literature tier expanded) to the viewport as a fallback. */
+  max-height: calc(100dvh - 1rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 12px 32px rgb(15 23 42 / 0.18);
+}
+
+.beeblio-ask-pop {
+  animation: beeblio-ask-pop 120ms ease-out;
+}
+
+@keyframes beeblio-ask-pop {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.beeblio-generated-bibliography {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 5.5rem 4.5rem;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* ── Shortcuts dialog: physical keycaps + looping UI previews ──────────
+   Both demos run one shared 6.5s timeline: the keycaps press, the
+   resulting panel pops in, rows stagger, then everything fades and the
+   cycle repeats. All elements mount together, so their animations stay
+   in sync without JS. */
+
+:root {
+  --beeblio-keycap-wall: oklch(0.74 0.025 250);
+  --beeblio-keycap-rest-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    inset 0 -2px 0 rgb(15 23 42 / 0.06),
+    0 3px 0 0 var(--beeblio-keycap-wall),
+    0 6px 9px rgb(15 23 42 / 0.13);
+  --beeblio-keycap-press-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.24),
+    0 0 0 0 var(--beeblio-keycap-wall),
+    0 2px 4px rgb(15 23 42 / 0.17);
+}
+
+.dark {
+  --beeblio-keycap-wall: oklch(0.13 0.02 250);
+  --beeblio-keycap-rest-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.09),
+    inset 0 -2px 0 rgb(0 0 0 / 0.22),
+    0 3px 0 0 var(--beeblio-keycap-wall),
+    0 6px 9px rgb(0 0 0 / 0.45);
+  --beeblio-keycap-press-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 0 0 0 var(--beeblio-keycap-wall),
+    0 2px 4px rgb(0 0 0 / 0.5);
+}
+
+/* Keycap: raised face with a hard "wall" below it; pressing slides the cap
+   down onto the wall like a real switch. */
+.beeblio-keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.55rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: var(--beeblio-keycap-rest-shadow);
+}
+
+/* Stage: the bordered mini-canvas the preview panel pops inside. */
+.beeblio-sc-stage {
+  display: flex;
+  justify-content: center;
+  min-height: 11.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+}
+
+.beeblio-sc-palette,
+.beeblio-sc-menu {
+  align-self: flex-start;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 10px 24px rgb(15 23 42 / 0.14);
+  padding-bottom: 0.25rem;
+}
+
+/* The "@" demo types on a white document page; its menu uses a fixed light
+   palette so the page reads the same in dark mode. */
+.beeblio-sc-stage--doc {
+  background: #fff;
+}
+.beeblio-sc-menu-doc {
+  border-color: rgb(203 213 225);
+  background: #fff;
+  color: rgb(30 41 59);
+}
+
+.beeblio-sc-caret {
+  display: inline-block;
+  width: 1px;
+  height: 0.8em;
+  background: currentColor;
+  vertical-align: baseline;
+  animation: beeblio-sc-caret 1.1s infinite;
+}
+
+/* Animation triggers are scoped to .beeblio-sc, carried by every root in
+   shortcut-demos.tsx, so the demos animate wherever they are mounted (the
+   in-app Shortcuts dialog and the marketing page). The dialog mounts its
+   content fresh on every open, so every demo animation carries the same
+   negative entry delay: a newly mounted demo joins the timeline just after
+   the panel has landed (rows still staggering in, keys releasing) instead of
+   resting at 0% where the panel is hidden — the canvas is never blank.
+   -0.85s drops in at ~13% of the loop; keep it in sync with the 6.5s loop. */
+.beeblio-sc {
+  --beeblio-sc-loop-entry: -0.85s;
+}
+.beeblio-sc .beeblio-sc-mod-key {
+  animation: beeblio-sc-press-mod 6.5s ease-in-out infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+.beeblio-sc .beeblio-sc-p-key {
+  animation: beeblio-sc-press-late 6.5s ease-in-out infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+.beeblio-sc .beeblio-sc-at-key {
+  animation: beeblio-sc-press-early 6.5s ease-in-out infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+.beeblio-sc .beeblio-sc-palette {
+  transform-origin: 50% 0;
+  animation: beeblio-sc-pop-below 6.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+.beeblio-sc .beeblio-sc-menu {
+  transform-origin: 50% 0;
+  animation: beeblio-sc-pop-below 6.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+.beeblio-sc .beeblio-sc-at-char {
+  animation: beeblio-sc-at-type 6.5s infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+.beeblio-sc .beeblio-sc-in-1 {
+  animation: beeblio-sc-in-1 6.5s ease-out infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+.beeblio-sc .beeblio-sc-in-2 {
+  animation: beeblio-sc-in-2 6.5s ease-out infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+.beeblio-sc .beeblio-sc-in-3 {
+  animation: beeblio-sc-in-3 6.5s ease-out infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+
+/* Quick Open chord: a quick tap at the top of the loop. The panel enters
+   while these land, so the stage never waits on the keycaps. */
+@keyframes beeblio-sc-press-mod {
+  0%, 3% { transform: translateY(0); box-shadow: var(--beeblio-keycap-rest-shadow); }
+  6%, 11% { transform: translateY(3px); box-shadow: var(--beeblio-keycap-press-shadow); }
+  15%, 100% { transform: translateY(0); box-shadow: var(--beeblio-keycap-rest-shadow); }
+}
+@keyframes beeblio-sc-press-late {
+  0%, 5% { transform: translateY(0); box-shadow: var(--beeblio-keycap-rest-shadow); }
+  8%, 11% { transform: translateY(3px); box-shadow: var(--beeblio-keycap-press-shadow); }
+  15%, 100% { transform: translateY(0); box-shadow: var(--beeblio-keycap-rest-shadow); }
+}
+/* "@" is a single tap at the top of its timeline so the menu has the stage. */
+@keyframes beeblio-sc-press-early {
+  0%, 4% { transform: translateY(0); box-shadow: var(--beeblio-keycap-rest-shadow); }
+  7%, 10% { transform: translateY(3px); box-shadow: var(--beeblio-keycap-press-shadow); }
+  14%, 100% { transform: translateY(0); box-shadow: var(--beeblio-keycap-rest-shadow); }
+}
+/* The panel owns almost the whole loop: it pops in right away — the chord
+   taps land while it is already entering — holds for reading, then ducks out
+   for only a short beat at the seam before the next cycle. */
+@keyframes beeblio-sc-pop-below {
+  0% { opacity: 0; transform: translateY(10px) scale(0.96); }
+  7%, 92% { opacity: 1; transform: translateY(0) scale(1); }
+  96%, 100% { opacity: 0; transform: translateY(5px) scale(0.98); }
+}
+/* The "@" character appears at the caret the instant the key bottoms out. */
+@keyframes beeblio-sc-at-type {
+  0%, 5% { opacity: 0; }
+  6%, 90% { opacity: 1; }
+  94%, 100% { opacity: 0; }
+}
+/* Tier rows stagger in just after their panel lands. */
+@keyframes beeblio-sc-in-1 {
+  0%, 8% { opacity: 0; transform: translateY(3px); }
+  12%, 100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes beeblio-sc-in-2 {
+  0%, 11% { opacity: 0; transform: translateY(3px); }
+  15%, 100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes beeblio-sc-in-3 {
+  0%, 14% { opacity: 0; transform: translateY(3px); }
+  18%, 100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes beeblio-sc-caret {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+
+/* Without motion the demos rest in their "panel open" state, which still
+   illustrates the shortcut's result. */
+@media (prefers-reduced-motion: reduce) {
+  .beeblio-sc *,
+  .beeblio-sc *::before,
+  .beeblio-sc *::after {
+    animation: none !important;
+  }
+}
+
+.beeblio-generated-bibliography p {
+  margin: 0;
+  font: inherit;
+}
+
+.beeblio-tiptap-document-surface:has(.beeblio-generated-bibliography) .tiptap {
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+.beeblio-generated-bibliography h2 {
+  margin: 0 0 1rem;
+  padding-top: 2rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  outline: none;
+}
+
+.beeblio-generated-bibliography h2:focus {
+  text-decoration: underline dotted color-mix(in oklab, var(--ring) 55%, transparent);
+  text-underline-offset: 0.2rem;
+}
+
+.beeblio-tiptap-editor .tiptap > :first-child {
+  margin-top: 0;
+}
+
+.beeblio-tiptap-editor .tiptap > :last-child {
+  margin-bottom: 0;
+}
+
+.beeblio-tiptap-editor .tiptap :is(h1, h2, h3, h4, h5, h6) {
+  color: inherit;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.beeblio-tiptap-editor .tiptap h1 {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 2rem;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.beeblio-tiptap-editor .tiptap h2 {
+  margin: 1.35rem 0 0.65rem;
+  font-size: 1.5rem;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+.beeblio-tiptap-editor .tiptap h3 {
+  margin: 1.15rem 0 0.55rem;
+  font-size: 1.2rem;
+  line-height: 1.4;
+}
+
+.beeblio-tiptap-editor .tiptap p {
+  margin: 0.65rem 0;
+}
+
+.beeblio-tiptap-editor .tiptap :is(ul, ol) {
+  margin: 0.75rem 0;
+  padding-left: 1.75rem;
+}
+
+.beeblio-tiptap-editor .tiptap :is(ul, ol) li {
+  margin-block: 0 !important;
+}
+
+.beeblio-tiptap-editor .tiptap :is(ul, ol) li > p {
+  margin-block: 0 !important;
+  line-height: 1.5;
+}
+
+.beeblio-tiptap-editor .tiptap :is(ul, ol) li + li {
+  margin-top: 0.15rem !important;
+}
+
+.beeblio-tiptap-editor .tiptap ul {
+  list-style: disc;
+}
+
+.beeblio-tiptap-editor .tiptap ol {
+  list-style: decimal;
+}
+
+.beeblio-tiptap-editor .tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.beeblio-tiptap-editor .tiptap ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0.45rem 0;
+}
+
+.beeblio-tiptap-editor .tiptap ul[data-type="taskList"] li > label {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding-top: 0.28rem;
+}
+
+.beeblio-tiptap-editor .tiptap ul[data-type="taskList"] li > label input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+.beeblio-tiptap-editor .tiptap ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.beeblio-tiptap-editor .tiptap ul[data-type="taskList"] li > div > p {
+  margin: 0;
+}
+
+.beeblio-tiptap-editor .tiptap a {
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--primary) 45%, transparent);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.beeblio-tiptap-editor .tiptap a:hover {
+  text-decoration-color: var(--primary);
+}
+
+/* Tiptap keeps resizable images hidden until they load, but an SVG can finish
+   loading while reporting naturalWidth 0 (no intrinsic size), which never
+   trips the built-in reveal check — force those visible. */
+.beeblio-tiptap-editor .tiptap [data-resize-container][data-node="image"] {
+  pointer-events: auto !important;
+  visibility: visible !important;
+}
+
+/* Figure selection cues: faint outline on hover, solid ring when selected.
+   The resize container is a block-level div that would span the whole
+   column — shrink it to the image so the ring hugs the actual figure. */
+.beeblio-tiptap-editor .tiptap [data-resize-container][data-node="image"] {
+  margin: 1.5rem auto;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 4px;
+  outline: 2px solid transparent;
+  outline-offset: 4px;
+  transition: outline-color 120ms ease;
+}
+
+.beeblio-tiptap-editor .tiptap [data-resize-container][data-node="image"] img {
+  margin: 0;
+}
+
+.beeblio-tiptap-editor .tiptap [data-resize-container][data-node="image"]:hover {
+  outline-color: color-mix(in oklab, var(--primary) 30%, transparent);
+}
+
+.beeblio-tiptap-editor .tiptap [data-resize-container][data-node="image"].ProseMirror-selectednode,
+.beeblio-tiptap-editor .tiptap [data-resize-container][data-node="image"].beeblio-figure-selected {
+  outline-color: color-mix(in oklab, var(--primary) 70%, transparent);
+}
+
+/* Corner resize handles (unstyled divs out of the box). */
+.beeblio-tiptap-editor .tiptap [data-resize-handle] {
+  z-index: 5;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--background);
+  border-radius: 4px;
+  background: var(--primary);
+  box-shadow: 0 1px 4px rgb(15 23 42 / 0.35);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.beeblio-tiptap-editor .tiptap [data-resize-handle="top-left"] {
+  cursor: nwse-resize;
+  transform: translate(-50%, -50%);
+}
+
+.beeblio-tiptap-editor .tiptap [data-resize-handle="top-right"] {
+  cursor: nesw-resize;
+  transform: translate(50%, -50%);
+}
+
+.beeblio-tiptap-editor .tiptap [data-resize-handle="bottom-left"] {
+  cursor: nesw-resize;
+  transform: translate(-50%, 50%);
+}
+
+.beeblio-tiptap-editor .tiptap [data-resize-handle="bottom-right"] {
+  cursor: nwse-resize;
+  transform: translate(50%, 50%);
+}
+
+.beeblio-tiptap-editor .tiptap [data-resize-container]:hover [data-resize-handle],
+.beeblio-tiptap-editor .tiptap [data-resize-container].ProseMirror-selectednode [data-resize-handle],
+.beeblio-tiptap-editor .tiptap [data-resize-container].beeblio-figure-selected [data-resize-handle] {
+  opacity: 1;
+}
+
+.beeblio-tiptap-editor .tiptap .tableWrapper {
+  overflow-x: auto;
+}
+
+.beeblio-tiptap-editor .tiptap table {
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  overflow: hidden;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.beeblio-tiptap-editor .tiptap :is(td, th) {
+  border: 1px solid var(--border);
+  min-width: 2rem;
+  padding: 0.45rem 0.65rem;
+  position: relative;
+  vertical-align: top;
+}
+
+.beeblio-tiptap-editor .tiptap th {
+  background: var(--muted);
+  font-weight: 600;
+  text-align: left;
+}
+
+.beeblio-tiptap-editor .tiptap td p,
+.beeblio-tiptap-editor .tiptap th p {
+  margin: 0;
+}
+
+.beeblio-tiptap-editor .tiptap .selectedCell::after {
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.beeblio-tiptap-editor .tiptap .column-resize-handle {
+  background: var(--primary);
+  bottom: 0;
+  pointer-events: none;
+  position: absolute;
+  right: -2px;
+  top: 0;
+  width: 4px;
+}
+
+.beeblio-tiptap-editor .tiptap.resize-cursor {
+  cursor: col-resize;
+}
+
+.beeblio-tiptap-editor .tiptap blockquote {
+  margin: 1rem 0;
+  border-left: 3px solid var(--border);
+  padding-left: 1rem;
+  color: var(--muted-foreground);
+}
+
+.beeblio-tiptap-editor .tiptap blockquote[data-callout="important"] [data-callout-title] {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0.2rem;
+  color: color-mix(in oklab, var(--muted-foreground) 72%, transparent);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.beeblio-tiptap-editor .tiptap blockquote[data-callout="important"] [data-callout-content] > :first-child {
+  margin-top: 0;
+}
+
+.beeblio-tiptap-editor .tiptap blockquote[data-callout="important"] [data-callout-content] > :last-child {
+  margin-bottom: 0;
+}
+
+.beeblio-tiptap-editor .tiptap pre {
+  margin: 1rem 0;
+  overflow: auto;
+  border-radius: 0.6rem;
+  background: color-mix(in oklab, var(--foreground) 92%, var(--background));
+  padding: 0.9rem 1rem;
+  color: var(--background);
+  font: 0.82rem/1.6 var(--font-mono);
+  white-space: pre-wrap;
+}
+
+.beeblio-tiptap-editor .tiptap pre[data-frontmatter] {
+  display: none;
+}
+
+.beeblio-tiptap-editor .tiptap pre[data-frontmatter] + * {
+  margin-top: 0;
+}
+
+.beeblio-tiptap-editor .tiptap code:not(pre code) {
+  border-radius: 0.25rem;
+  background: var(--muted);
+  padding: 0.12rem 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+
+.beeblio-tiptap-editor .tiptap :is(sub, sup) {
+  font-size: 0.72em;
+  line-height: 0;
+}
+
+.beeblio-tiptap-editor .beeblio-code-block {
+  margin: 1.25rem 0;
+  overflow: hidden;
+  border: 1px solid rgb(48 54 61);
+  border-radius: 0.65rem;
+  background: rgb(13 17 23);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.14);
+}
+
+.beeblio-tiptap-editor .beeblio-code-header {
+  border-bottom: 1px solid rgb(48 54 61);
+  background: rgb(22 27 34);
+  padding: 0.45rem 0.8rem;
+  color: rgb(139 148 158);
+  font: 600 0.68rem/1.2 var(--font-sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.beeblio-tiptap-editor .beeblio-code-block pre,
+.beeblio-tiptap-editor .beeblio-mermaid-source pre {
+  margin: 0;
+  border-radius: 0;
+  background: rgb(13 17 23);
+  padding: 0.9rem 1rem;
+  color: rgb(230 237 243);
+  tab-size: 2;
+}
+
+.beeblio-tiptap-editor .beeblio-code-content {
+  display: block;
+  min-height: 1.6em;
+  color: rgb(230 237 243);
+  font: 0.82rem/1.65 var(--font-mono);
+  outline: none;
+  white-space: pre;
+}
+
+.beeblio-tiptap-editor .beeblio-code-content .hljs-comment,
+.beeblio-tiptap-editor .beeblio-code-content .hljs-quote {
+  color: rgb(139 148 158);
+  font-style: italic;
+}
+
+.beeblio-tiptap-editor .beeblio-code-content :is(.hljs-keyword, .hljs-selector-tag, .hljs-doctag) {
+  color: rgb(255 123 114);
+}
+
+.beeblio-tiptap-editor .beeblio-code-content :is(.hljs-string, .hljs-regexp, .hljs-addition) {
+  color: rgb(165 214 255);
+}
+
+.beeblio-tiptap-editor .beeblio-code-content :is(.hljs-title, .hljs-title\.function_, .hljs-section) {
+  color: rgb(210 168 255);
+}
+
+.beeblio-tiptap-editor .beeblio-code-content :is(.hljs-number, .hljs-literal, .hljs-variable, .hljs-template-variable) {
+  color: rgb(121 192 255);
+}
+
+.beeblio-tiptap-editor .beeblio-code-content :is(.hljs-type, .hljs-built_in, .hljs-attribute, .hljs-symbol) {
+  color: rgb(255 166 87);
+}
+
+.beeblio-tiptap-editor .beeblio-code-content :is(.hljs-params, .hljs-property, .hljs-punctuation) {
+  color: rgb(201 209 217);
+}
+
+.beeblio-tiptap-editor .beeblio-mermaid-block {
+  margin: 1.25rem 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--background);
+}
+
+.beeblio-tiptap-editor .beeblio-mermaid-block.is-selected {
+  border-color: color-mix(in oklab, var(--ring) 65%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 14%, transparent);
+}
+
+.beeblio-tiptap-editor .beeblio-mermaid-preview {
+  min-height: 8rem;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.beeblio-tiptap-editor .beeblio-mermaid-preview > :first-child {
+  margin-top: 0;
+}
+
+.beeblio-tiptap-editor .beeblio-mermaid-preview > :last-child {
+  margin-bottom: 0;
+}
+
+.beeblio-tiptap-editor .beeblio-mermaid-source {
+  border-top: 1px solid var(--border);
+}
+
+.beeblio-tiptap-editor .beeblio-mermaid-source summary {
+  cursor: pointer;
+  padding: 0.65rem 0.85rem;
+  color: var(--muted-foreground);
+  font: 600 0.72rem/1.2 var(--font-sans);
+  user-select: none;
+}
+
+/* Simplify Mermaid UI by stripping the inner box wrapper */
+.beeblio-tiptap-editor .beeblio-mermaid-preview .rounded-xl {
+  border: none !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Remove the top header which contains the "mermaid" label */
+.beeblio-tiptap-editor .beeblio-mermaid-preview .rounded-xl > div:first-child {
+  display: none !important;
+}
+
+/* Auto-hide ALL toolbars (both use z-10) unless hovered */
+.beeblio-tiptap-editor .beeblio-mermaid-preview .z-10 {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.2s ease !important;
+}
+.beeblio-tiptap-editor .beeblio-mermaid-preview:hover .z-10,
+.beeblio-tiptap-editor .beeblio-mermaid-preview:focus-within .z-10 {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.beeblio-tiptap-editor .tiptap-mathematics-render {
+  cursor: pointer;
+  border-radius: 0.3rem;
+}
+
+.beeblio-tiptap-editor .tiptap-mathematics-render:hover {
+  background: color-mix(in oklab, var(--accent) 70%, transparent);
+}
+
+.beeblio-tiptap-editor .tiptap-mathematics-render[data-type="inline-math"] {
+  display: inline-block;
+  margin-inline: 0.12em;
+  padding-inline: 0.18em;
+}
+
+.beeblio-tiptap-editor .tiptap-mathematics-render[data-type="block-math"] {
+  display: block;
+  margin: 1.25rem 0;
+  overflow-x: auto;
+  padding: 0.9rem;
+  text-align: center;
+}
+
+.beeblio-tiptap-editor .tiptap img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.5rem auto;
+  border-radius: 2px;
+  object-fit: contain;
+}
+
+/* SVG exports (mermaid, draw.io) often declare width="100%" with no height,
+   leaving the <img> without a usable intrinsic size — it collapses to 0×0.
+   Fill the text column until the image gets an explicit width (e.g. resize).
+   The wrapper must span too: it shrink-to-fits inside the resize flex
+   container, so a percentage width on the <img> alone has nothing to resolve
+   against. */
+.beeblio-tiptap-editor .tiptap [data-resize-wrapper]:has(> img[src$=".svg" i]:not([width])) {
+  width: 100%;
+}
+
+.beeblio-tiptap-editor .tiptap img[src$=".svg" i]:not([width]) {
+  width: 100%;
+}
+
+.beeblio-tiptap-editor .tiptap table {
+  width: 100%;
+  margin: 1.25rem 0;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.beeblio-tiptap-editor .tiptap :is(th, td) {
+  position: relative;
+  min-width: 1em;
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.beeblio-tiptap-editor .tiptap th {
+  background: var(--muted);
+  font-weight: 650;
+}
+
+.beeblio-tiptap-editor .tiptap .selectedCell::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: color-mix(in oklab, var(--ring) 18%, transparent);
+  content: "";
+}
+
+.beeblio-tiptap-editor .tiptap .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  pointer-events: none;
+  background: var(--ring);
+}
+
+.beeblio-tiptap-editor .tiptap p.is-editor-empty:first-child::before {
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--muted-foreground);
+  content: attr(data-placeholder);
+}
+
+/* The placeholder floats with zero height, so a sentence suggestion in the
+   same empty paragraph would draw right on top of it; the suggestion replaces
+   the placeholder's job while it is showing. Mirrors the placeholder rule's
+   selectors (plus :has) so this wins the specificity tie. */
+.beeblio-tiptap-editor .tiptap p.is-editor-empty:first-child:has(.beeblio-suggestion-ghost)::before {
+  content: none;
+}
+
+@container (max-width: 816px) {
+  .beeblio-tiptap-editor .tiptap {
+    padding: 3rem 2.5rem;
+  }
+
+  .beeblio-generated-bibliography {
+    padding: 0 2.5rem 3rem;
+  }
+}
+
+@container (max-width: 640px) {
+  .beeblio-tiptap-document-surface {
+    min-height: calc(100dvh - 10rem);
+  }
+
+  .beeblio-tiptap-editor .tiptap {
+    padding: 2rem 1.5rem;
+  }
+
+  .beeblio-generated-bibliography {
+    padding: 0 1.5rem 2rem;
+  }
+}
+
+/* ── Inline diff view & marks ── */
+
+.beeblio-review-changed-current,
+.beeblio-review-changed-proposed {
+  border-radius: 0.35rem;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.beeblio-review-changed-current {
+  background: color-mix(in oklab, var(--destructive) 11%, transparent) !important;
+}
+
+.beeblio-review-changed-proposed {
+  background: color-mix(in oklab, #22c55e 12%, transparent) !important;
+}
+
+.beeblio-review-anchor {
+  border-radius: 0.4rem;
+  background: color-mix(in oklab, var(--primary) 14%, transparent) !important;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 28%, transparent);
+  transition: background 180ms ease, box-shadow 180ms ease;
+}
+
+.review-card-markdown > :first-child {
+  margin-top: 0;
+}
+
+.review-card-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.review-card-markdown :is(p, ul, ol, blockquote, pre) {
+  margin-block: 0.25rem;
+}
+
+.review-card-markdown :is(h1, h2, h3, h4, h5, h6) {
+  margin-block: 0.25rem;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 600;
+}
+
+.beeblio-diff-ins,
+ins.beeblio-diff-ins {
+  text-decoration: none !important;
+  background-color: rgba(34, 197, 94, 0.16) !important;
+  color: #15803d !important;
+  border-bottom: 1.5px solid #22c55e !important;
+  border-radius: 2px;
+  padding: 0.5px 2px;
+}
+
+.dark .beeblio-diff-ins,
+.dark ins.beeblio-diff-ins {
+  background-color: rgba(34, 197, 94, 0.25) !important;
+  color: #86efac !important;
+  border-bottom: 1.5px solid #4ade80 !important;
+}
+
+.beeblio-diff-del,
+del.beeblio-diff-del {
+  text-decoration: line-through !important;
+  text-decoration-color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #b91c1c !important;
+  opacity: 0.85 !important;
+  border-radius: 2px;
+  padding: 0.5px 2px;
+}
+
+.dark .beeblio-diff-del,
+.dark del.beeblio-diff-del {
+  background-color: rgba(239, 68, 68, 0.25) !important;
+  color: #fca5a5 !important;
+}
+
+.beeblio-diff-view {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 1056px;
+  padding: 4.5rem 5.5rem;
+}
+
+@media (max-width: 640px) {
+  .beeblio-diff-view {
+    padding: 2rem 1.5rem;
+  }
+}
+
+
+
+/* Sonner toasts all share the neutral popover look; retint only error toasts
+   with a soft destructive wash so failures stand apart from successes without
+   reading as an alarm. Redefining the --normal-* variables on the toast itself
+   wins over the values the Toaster sets on its root for every other type. */
+[data-sonner-toast][data-type="error"] {
+  --normal-bg: color-mix(in oklab, var(--destructive) 8%, var(--popover));
+  --normal-border: color-mix(in oklab, var(--destructive) 26%, var(--border));
+  --normal-text: color-mix(in oklab, var(--destructive) 78%, var(--popover-foreground));
+}
+
+/* Sonner pins the description to a neutral grey; error descriptions carry the
+   failure detail, so they follow the retinted text instead. */
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] [data-description] {
+  color: inherit;
+}
+
+/* Top navigation progress bar (components/navigation-progress.tsx): an
+   indeterminate grow while a route transition is in flight, then a sweep to
+   full width that fades on commit. Reduced motion gets a static bar that
+   fades out instead of travelling. */
+@keyframes nav-progress-run {
+  from {
+    transform: scaleX(0.04);
+  }
+  55% {
+    transform: scaleX(0.5);
+  }
+  to {
+    transform: scaleX(0.88);
+  }
+}
+
+@keyframes nav-progress-done {
+  from {
+    transform: scaleX(0.88);
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+.nav-progress-run {
+  animation: nav-progress-run 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.nav-progress-done {
+  animation: nav-progress-done 0.45s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress-run {
+    animation: none;
+    transform: scaleX(0.5);
+  }
+
+  .nav-progress-done {
+    animation: none;
+    transform: scaleX(1);
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+  }
+}
+
+/* Pending upload rows (pending-upload-row.tsx): an indeterminate sweep along
+   the row's bottom edge while the file travels to storage. Reduced motion
+   gets a static half-opacity bar instead of the travelling one. */
+@keyframes upload-progress-run {
+  from {
+    left: -35%;
+  }
+
+  to {
+    left: 105%;
+  }
+}
+
+.upload-progress-run {
+  animation: upload-progress-run 1.3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upload-progress-run {
+    animation: none;
+    left: 0;
+    width: 100%;
+    opacity: 0.45;
+  }
+}
+
+/* ============================================================
+   Blog admin editor (blog-tiptap-editor): a WYSIWYG preview of the
+   post body in the marketing design language — Newsreader display
+   headings, muted body copy, primary-color accents — mirroring how
+   lib/blog/mdx.tsx renders the published page.
+   ============================================================ */
+.blog-tiptap-editor .tiptap {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 60vh;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.blog-tiptap-editor .tiptap > :first-child {
+  margin-top: 0;
+}
+
+.blog-tiptap-editor .tiptap > :last-child {
+  margin-bottom: 0;
+}
+
+.blog-tiptap-editor .tiptap :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--font-newsreader), ui-serif, Georgia, serif;
+  color: var(--foreground);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.blog-tiptap-editor .tiptap h1 {
+  margin-top: 3rem;
+  font-size: 2.25rem;
+}
+
+.blog-tiptap-editor .tiptap h2 {
+  scroll-margin-top: 7rem;
+  margin-top: 3.5rem;
+  font-size: 1.75rem;
+}
+
+.blog-tiptap-editor .tiptap h3 {
+  scroll-margin-top: 7rem;
+  margin-top: 2.25rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.blog-tiptap-editor .tiptap p {
+  margin-top: 1rem;
+  color: var(--muted-foreground);
+  line-height: 1.75;
+}
+
+.blog-tiptap-editor .tiptap :is(ul, ol) {
+  margin-top: 1rem;
+  padding-left: 1.25rem;
+  color: var(--muted-foreground);
+  line-height: 1.75;
+}
+
+.blog-tiptap-editor .tiptap ul {
+  list-style: disc;
+}
+
+.blog-tiptap-editor .tiptap ol {
+  list-style: decimal;
+}
+
+.blog-tiptap-editor .tiptap li > p {
+  margin-top: 0.25rem;
+}
+
+.blog-tiptap-editor .tiptap li::marker {
+  color: var(--primary);
+}
+
+.blog-tiptap-editor .tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+
+.blog-tiptap-editor .tiptap ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.blog-tiptap-editor .tiptap ul[data-type="taskList"] li > label {
+  margin-top: 0.35rem;
+}
+
+.blog-tiptap-editor .tiptap a {
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--primary) 30%, transparent);
+  text-underline-offset: 4px;
+}
+
+.blog-tiptap-editor .tiptap blockquote {
+  margin-top: 1.5rem;
+  border-left: 2px solid color-mix(in oklab, var(--primary) 30%, transparent);
+  padding-left: 1.25rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.blog-tiptap-editor .tiptap blockquote[data-callout="important"] {
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 0.75rem;
+  background: color-mix(in oklab, var(--card) 60%, transparent);
+  padding: 1.1rem 1.25rem;
+  font-style: normal;
+}
+
+.blog-tiptap-editor .tiptap blockquote[data-callout="important"] [data-callout-title] {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0.2rem;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.blog-tiptap-editor .tiptap blockquote[data-callout="important"] [data-callout-content] > :first-child {
+  margin-top: 0;
+}
+
+.blog-tiptap-editor .tiptap pre {
+  margin-top: 1.5rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--muted);
+  padding: 1rem;
+  color: var(--foreground);
+  font: 0.85rem/1.6 var(--font-mono);
+  white-space: pre-wrap;
+}
+
+.blog-tiptap-editor .tiptap code:not(pre code) {
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: color-mix(in oklab, var(--muted) 60%, transparent);
+  padding: 0.12rem 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+}
+
+.blog-tiptap-editor .tiptap hr {
+  margin: 3rem 0;
+  border-color: var(--border);
+}
+
+.blog-tiptap-editor .tiptap img {
+  margin-top: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  max-width: 100%;
+  height: auto;
+}
+
+.blog-tiptap-editor .tiptap table {
+  margin-top: 1.5rem;
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.blog-tiptap-editor .tiptap :is(td, th) {
+  border: 1px solid var(--border);
+  padding: 0.55rem 0.8rem;
+  text-align: left;
+}
+
+.blog-tiptap-editor .tiptap th {
+  background: color-mix(in oklab, var(--muted) 50%, transparent);
+  font-weight: 600;
+}
+
+.blog-tiptap-editor .tiptap .selectedCell::after {
+  background: color-mix(in oklab, var(--primary) 8%, transparent);
+}
+
+.blog-tiptap-editor .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: color-mix(in oklab, var(--muted-foreground) 55%, transparent);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.blog-tiptap-editor .tiptap .katex-display {
+  overflow-x: auto;
+  padding: 0.35rem 0;
+}
+
+/* ============================================================
+   Blog code blocks (.blog-prose): lowlight/hljs token palette
+   for fenced code on the light prose box. One custom property
+   per token group, with a lighter dark-mode set; assignment via
+   .hljs-* classes so only blog content is affected.
+   ============================================================ */
+.blog-prose {
+  --hljs-keyword: oklch(0.55 0.19 285);
+  --hljs-string: oklch(0.51 0.13 160);
+  --hljs-number: oklch(0.62 0.13 75);
+  --hljs-function: oklch(0.5 0.17 255);
+  --hljs-attr: oklch(0.47 0.1 225);
+  --hljs-type: oklch(0.5 0.16 310);
+}
+
+.dark .blog-prose {
+  --hljs-keyword: oklch(0.75 0.14 285);
+  --hljs-string: oklch(0.74 0.13 160);
+  --hljs-number: oklch(0.8 0.12 80);
+  --hljs-function: oklch(0.72 0.12 250);
+  --hljs-attr: oklch(0.74 0.09 225);
+  --hljs-type: oklch(0.75 0.12 310);
+}
+
+.blog-prose .hljs-comment,
+.blog-prose .hljs-quote {
+  color: color-mix(in oklab, var(--muted-foreground) 75%, transparent);
+  font-style: italic;
+}
+
+.blog-prose .hljs-keyword,
+.blog-prose .hljs-selector-tag,
+.blog-prose .hljs-built_in,
+.blog-prose .hljs-literal,
+.blog-prose .hljs-doctag {
+  color: var(--hljs-keyword);
+}
+
+.blog-prose .hljs-string,
+.blog-prose .hljs-regexp,
+.blog-prose .hljs-symbol,
+.blog-prose .hljs-bullet {
+  color: var(--hljs-string);
+}
+
+.blog-prose .hljs-number {
+  color: var(--hljs-number);
+}
+
+.blog-prose .hljs-title,
+.blog-prose .hljs-title.function_,
+.blog-prose .hljs-section {
+  color: var(--hljs-function);
+}
+
+.blog-prose .hljs-attr,
+.blog-prose .hljs-attribute,
+.blog-prose .hljs-variable,
+.blog-prose .hljs-template-variable,
+.blog-prose .hljs-params,
+.blog-prose .hljs-property {
+  color: var(--hljs-attr);
+}
+
+.blog-prose .hljs-type,
+.blog-prose .hljs-title.class_,
+.blog-prose .hljs-class .hljs-title {
+  color: var(--hljs-type);
+}
+
+.blog-prose .hljs-name,
+.blog-prose .hljs-tag,
+.blog-prose .hljs-selector-id,
+.blog-prose .hljs-selector-class {
+  color: var(--primary);
+}
+
+.blog-prose .hljs-meta,
+.blog-prose .hljs-meta .hljs-keyword {
+  color: var(--muted-foreground);
+}
+
+.blog-prose .hljs-addition {
+  color: var(--hljs-string);
+}
+
+.blog-prose .hljs-deletion {
+  color: oklch(0.58 0.19 20);
+}
+
+.dark .blog-prose .hljs-deletion {
+  color: oklch(0.72 0.15 20);
+}
+
+.blog-prose .hljs-emphasis {
+  font-style: italic;
+}
+
+.blog-prose .hljs-strong {
+  font-weight: 600;
+}
