@@ -144,8 +144,10 @@ export async function readWorkspaceFileAsResponse(userId: string, slug: string, 
     const start = Number(match[1]); const end = match[2] ? Math.min(Number(match[2]), file.content.length - 1) : file.content.length - 1;
     if (start >= file.content.length || end < start) return new Response(null, { status: 416, headers: { ...Object.fromEntries(headers), "Content-Range": `bytes */${file.content.length}` } });
     headers.set("Content-Range", `bytes ${start}-${end}/${file.content.length}`);
+    headers.set("Content-Length", String(end - start + 1));
     return new Response(new Uint8Array(file.content.subarray(start, end + 1)), { status: 206, headers });
   }
+  headers.set("Content-Length", String(file.content.length));
   return new Response(new Uint8Array(file.content), { status: 200, headers });
 }
 export async function getWorkspaceFileFingerprint(userId: string, slug: string, workspacePath: string) {

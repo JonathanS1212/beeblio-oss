@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { usePublicView } from "@/app/share/[shareId]/_components/public-view-context";
 import { EditorShell } from "./editor-shell";
 import { EditorSkeleton } from "./editor-skeleton";
 import { EditorError } from "./editor-states";
@@ -16,6 +17,7 @@ const VIEWER_PAGE_URL = "https://view.officeapps.live.com/op/view.aspx";
  * short-lived signed URL minted per mount (see /api/office/[projectId]/view).
  */
 export function OfficeWebViewer({ projectId, file, sourceUrl }: WorkspaceEditorProps) {
+  const { shareId } = usePublicView();
   const [src, setSrc] = useState<string>();
   const [frameLoaded, setFrameLoaded] = useState(false);
   const [error, setError] = useState<string>();
@@ -29,6 +31,13 @@ export function OfficeWebViewer({ projectId, file, sourceUrl }: WorkspaceEditorP
 
     void (async () => {
       try {
+        if (shareId) {
+          if (window.location.protocol !== "https:") {
+            throw new Error("Office preview requires a public HTTPS share URL");
+          }
+          if (!cancelled) setSrc(new URL(sourceUrl, window.location.href).href);
+          return;
+        }
         const response = await fetch(
           `/api/office/${encodeURIComponent(projectId)}/view?path=${encodeURIComponent(file.path)}`,
           { signal: controller.signal, cache: "no-store" },
@@ -49,7 +58,7 @@ export function OfficeWebViewer({ projectId, file, sourceUrl }: WorkspaceEditorP
       cancelled = true;
       controller.abort();
     };
-  }, [projectId, file.path]);
+  }, [projectId, file.path, shareId, sourceUrl]);
 
   const embedUrl = src ? `${VIEWER_EMBED_URL}?src=${encodeURIComponent(src)}` : undefined;
   const openUrl = src ? `${VIEWER_PAGE_URL}?src=${encodeURIComponent(src)}` : undefined;

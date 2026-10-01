@@ -21,7 +21,7 @@ The project [session page](./app/%5BprojectId%5D/%5B%5B...sessionId%5D%5D/page.t
 - Node.js 24 and pnpm 11
 - An OpenRouter API key and model ID for the agent
 - Bash and Python 3 for local agent commands and analysis
-- Optional: LibreOffice (`soffice`) for previews of legacy Office files; other command-line tools and Python packages for the workflows you want to run
+- Optional: LibreOffice (`soffice`) for agent-assisted Office-to-PDF conversion; other command-line tools and Python packages for the workflows you want to run
 
 The folder picker uses macOS's native chooser. On other systems, enter an existing absolute folder path in the project form.
 
@@ -51,6 +51,7 @@ The main agent needs `OPENROUTER_API_KEY`, `OPENROUTER_MODEL_ID`, and `OPENROUTE
 | `GOOGLE_KNOWLEDGE_EMBEDDING_MODEL_ID`, `GOOGLE_KNOWLEDGE_QUERY_MODEL_ID` | Selected Google models for creating and querying Knowledge stores |
 | `MONID_API_KEY`, `BRAVE_SEARCH_API_KEY` | Optional research and web tools |
 | `CROSSREF_MAILTO` | Contact address for scholarly metadata requests |
+| `PUBLIC_TUNNEL_ORIGIN` | Public HTTPS origin of a tunnel to the local UI, used for Office Online previews and share links |
 
 The application has one local user and no browser login or accounts checks. Keep the servers bound to loopback: the agent's Bash tool uses your computer's own environment and can access files outside a project folder through shell commands.
 
@@ -65,7 +66,11 @@ Beeblio still calls external model and research APIs when those features are use
 
 ## Documents
 
-The Markdown editor can export DOCX, DOCX with Mendeley or Zotero citations, LaTeX, and portable Markdown. To make a PDF, export DOCX and convert it with your local document software or ask the agent to do it with a conversion script. Legacy Office previews use local LibreOffice when available.
+The Markdown editor can export DOCX, DOCX with Mendeley or Zotero citations, LaTeX, and portable Markdown. Office files in the workspace open in Microsoft's read-only Office Online viewer. Because Microsoft fetches the file itself, local previews require a public HTTPS tunnel to `127.0.0.1:3000` and its base URL in `PUBLIC_TUNNEL_ORIGIN`; restart `pnpm dev` after changing it. The Share button also uses this origin for links that others can open. Keep the tunnel running while using either feature. The tunnel exposes the app, and Office previews send the viewed file to Microsoft's service.
+
+To make a PDF, export DOCX and convert it with your local document software or ask the agent to do it. LibreOffice is optional for that local conversion; it is not used by the current Office file viewer.
+
+The Share button creates a public link for a file. When `PUBLIC_TUNNEL_ORIGIN` is set, the link uses that tunnel even if you opened Beeblio through localhost. Keep the app and tunnel running for others to view shared files or submit shared forms; form responses are saved in the project folder.
 
 ## Development commands
 

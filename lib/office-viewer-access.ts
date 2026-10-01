@@ -1,6 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { integerEnv } from "@/lib/env-config";
+import { localAgentSecret } from "@/lib/local-secret";
+import { publicTunnelOrigin } from "@/lib/public-tunnel-origin";
 
 type AccessClaims = {
   aud: "office-viewer-file";
@@ -17,18 +19,16 @@ const ACCESS_TOKEN_TTL_SECONDS = integerEnv(
 );
 
 export function officeViewerPublicOrigin(requestUrl: string) {
-  const configured = process.env.OFFICE_VIEWER_PUBLIC_ORIGIN?.trim();
-  return new URL(configured || requestUrl).origin;
+  return publicTunnelOrigin() ?? new URL(requestUrl).origin;
 }
 
 function secret() {
-  // Keep the old name as a deployment-safe migration fallback. It can be
-  // removed after OFFICE_VIEWER_SECRET is configured in every environment.
+  // Explicit deployment secrets take precedence. Local installs can reuse the
+  // persistent, automatically generated secret shared by the app's token issuers.
   const value = (
     process.env.OFFICE_VIEWER_SECRET || process.env.ONLYOFFICE_JWT_SECRET
   )?.trim();
-  if (!value) throw new Error("OFFICE_VIEWER_SECRET is not configured");
-  return value;
+  return value || localAgentSecret();
 }
 
 function encode(value: object) {

@@ -15,10 +15,9 @@ const officeExtensions = new Set([
 
 /**
  * Mints the public, short-lived URL that Microsoft's Office Online viewer
- * fetches the document from. `/api/office/file` serves the bytes; the `v`
- * query rides the GCS
- * generation ETag so a re-mount after an edit gets a fresh URL and the
- * viewer's server-side render cache misses.
+ * fetches the document from. `/api/office/file` serves the bytes directly;
+ * the `v` query uses the file ETag so a re-mount after an edit gets a fresh
+ * URL and the viewer's server-side render cache misses.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
@@ -33,8 +32,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ proj
   }
 
   try {
-    // A one-byte range read yields the generation-based ETag without moving
-    // the file; it changes on every overwrite from any writer.
+    // A one-byte range read yields the file ETag; it changes on overwrite.
     const probe = await readAgentWorkspaceFile(user.id, projectId, filePath, { range: "bytes=0-0" });
     const version = probe.headers.get("etag")?.replace(/"/g, "");
     const token = signOfficeViewerAccess({ aud: "office-viewer-file", userId: user.id, projectId, path: filePath });

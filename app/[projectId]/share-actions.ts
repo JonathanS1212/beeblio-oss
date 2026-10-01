@@ -5,7 +5,13 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { publicFiles, projects } from "@/db/schema";
 import { requireUser } from "@/lib/auth/session";
+import { publicTunnelOrigin } from "@/lib/public-tunnel-origin";
 import { getOwnedProject } from "./actions";
+
+export async function getSharePublicOrigin() {
+  await requireUser();
+  return publicTunnelOrigin();
+}
 
 export async function getPublicFileStatus(projectSlug: string, filePath: string) {
   const user = await requireUser();

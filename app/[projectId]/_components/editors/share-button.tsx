@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { getPublicFileStatus, setFilePublic } from "../../share-actions";
+import { getPublicFileStatus, getSharePublicOrigin, setFilePublic } from "../../share-actions";
 
 export function ShareButton({ projectId, filePath }: { projectId: string; filePath: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,16 +18,26 @@ export function ShareButton({ projectId, filePath }: { projectId: string; filePa
   const [shareId, setShareId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [publicOrigin, setPublicOrigin] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setIsLoading(true);
-      getPublicFileStatus(projectId, filePath).then((id) => {
-        setShareId(id);
-        setIsPublic(!!id);
-        setIsLoading(false);
-      });
-    }
+    if (!isOpen) return;
+    let cancelled = false;
+    setIsLoading(true);
+    void Promise.all([
+      getPublicFileStatus(projectId, filePath),
+      getSharePublicOrigin(),
+    ]).then(([id, origin]) => {
+      if (cancelled) return;
+      setShareId(id);
+      setIsPublic(!!id);
+      setPublicOrigin(origin);
+    }).catch(() => {
+      if (!cancelled) toast.error("Failed to load sharing status");
+    }).finally(() => {
+      if (!cancelled) setIsLoading(false);
+    });
+    return () => { cancelled = true; };
   }, [isOpen, projectId, filePath]);
 
   const handleToggle = async (checked: boolean) => {
@@ -49,7 +59,9 @@ export function ShareButton({ projectId, filePath }: { projectId: string; filePa
     }
   };
 
-  const shareUrl = shareId && typeof window !== "undefined" ? `${window.location.origin}/share/${shareId}` : "";
+  const linkOrigin = publicOrigin ?? (typeof window !== "undefined" ? window.location.origin : "");
+  const shareUrl = shareId && linkOrigin ? `${linkOrigin}/share/${shareId}` : "";
+  const localLink = linkOrigin ? ["localhost", "127.0.0.1", "[::1]"].includes(new URL(linkOrigin).hostname) : false;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl);
@@ -74,9 +86,6 @@ export function ShareButton({ projectId, filePath }: { projectId: string; filePa
         <div className="space-y-4">
           <div className="space-y-2">
             <h4 className="font-medium leading-none">Share File</h4>
-            {/* <p className="text-sm text-muted-foreground">
-              Make this file public so others can view and copy it.
-            </p> */}
           </div>
           <div className="flex items-center justify-between space-x-2 rounded-lg border p-3">
             <div className="flex items-center space-x-3">
@@ -93,20 +102,25 @@ export function ShareButton({ projectId, filePath }: { projectId: string; filePa
             <Switch
               id="public-toggle"
               checked={isPublic}
-              // onCheckedChange={() => notifyUpcomingFeature("Public sharing")}
               onCheckedChange={handleToggle}
               disabled={isLoading}
             />
           </div>
           {isPublic && shareUrl && (
-            <div className="flex space-x-2">
-              <Input value={shareUrl} readOnly className="h-8 flex-1" />
-              <Button size="sm" variant="secondary" className="shrink-0" onClick={handleCopy}>
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                <span className="sr-only">Copy</span>
-              </Button>
+            <div className="space-y-2">
+              <div className="flex space-x-2">
+                <Input value={shareUrl} readOnly className="h-8 flex-1" />
+                <Button size="sm" variant="secondary" className="shrink-0" onClick={handleCopy}>
+                  {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  <span className="sr-only">Copy</span>
+                </Button>
+              </div>
+              {localLink && <p className="text-xs text-amber-700 dark:text-amber-400">This localhost link only works on this computer. Set <code>PUBLIC_TUNNEL_ORIGIN</code> to share it with others.</p>}
             </div>
           )}
+          <p className="text-xs leading-5 text-muted-foreground">
+            This requires your app to be reachable at a public HTTPS URL. One way is to use a tunnel: set the URL as <code>PUBLIC_TUNNEL_ORIGIN</code> in <code>.env.local</code>.
+          </p>
         </div>
       </PopoverContent>
     </Popover>

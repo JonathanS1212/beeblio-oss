@@ -6,6 +6,7 @@ import { getUser } from "@/lib/auth/session";
 import { isFormHtml } from "@/lib/forms/parse";
 import { readAgentWorkspaceFile } from "@/lib/workspace-files";
 import { PublicFormView } from "./_components/public-form-view";
+import { ShareThemeToggle } from "./_components/share-theme-toggle";
 import { SharedFileViewer } from "./_components/shared-file-viewer";
 
 export default async function SharedFilePage({ params }: { params: Promise<{ shareId: string }> }) {
@@ -50,6 +51,7 @@ export default async function SharedFilePage({ params }: { params: Promise<{ sha
       return (
         <div className="h-screen w-full">
           <PublicFormView assetUrl={`/api/share/${encodeURIComponent(shareId)}/${encodedPath}`} />
+          <ShareThemeToggle />
         </div>
       );
     }
@@ -63,6 +65,7 @@ export default async function SharedFilePage({ params }: { params: Promise<{ sha
         filePath={fileRecord.filePath}
         isOwner={isOwner}
       />
+      <ShareThemeToggle />
     </div>
   );
 }
