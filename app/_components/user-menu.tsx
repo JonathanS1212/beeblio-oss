@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Monitor, Moon, Settings, Sun, User } from "lucide-react";
+import { ArrowUpRight, Globe, Monitor, Moon, Settings, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -113,6 +113,7 @@ export function UserMenu({
             <a href="https://beeblio.raihankalla.id">
               <Globe className="size-4" />
               <span>Beeblio</span>
+              <ArrowUpRight className="ml-auto size-4" aria-hidden="true" />
             </a>
           </DropdownMenuItem>
         </DropdownMenuContent>

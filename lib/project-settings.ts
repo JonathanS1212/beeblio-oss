@@ -126,7 +126,7 @@ export const DEFAULT_COMPLETION_SETTINGS: CompletionSettings = {
  */
 export const COMPLETION_SETTINGS_CHANGED_EVENT = "beeblio:completion-settings-changed";
 
-/** Legacy default document; absent in newly linked folders unless the user already has it. */
+/** Editable starter document created when a project folder is linked. */
 export const DEFAULT_OPEN_FILE_PATH = "research-draft.md";
 
 const MARKDOWN_EXTENSIONS = [".md", ".markdown"];
