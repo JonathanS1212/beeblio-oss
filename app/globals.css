@@ -1262,6 +1262,33 @@ a, button {
   animation: beeblio-sc-in-3 6.5s ease-out infinite;
   animation-delay: var(--beeblio-sc-loop-entry, 0s);
 }
+.beeblio-sc .beeblio-sc-selection {
+  animation: beeblio-sc-highlight 6.5s ease-in-out infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+.beeblio-sc .beeblio-sc-chat,
+.beeblio-sc .beeblio-sc-attachment {
+  animation: beeblio-sc-attach 6.5s ease-in-out infinite;
+  animation-delay: var(--beeblio-sc-loop-entry, 0s);
+}
+.beeblio-sc .beeblio-sc-attachment {
+  animation-name: beeblio-sc-attach-chip;
+}
+
+@keyframes beeblio-sc-highlight {
+  0%, 4%, 96%, 100% { background-color: transparent; }
+  7%, 92% { background-color: rgb(219 234 254); }
+}
+@keyframes beeblio-sc-attach {
+  0% { opacity: 0; transform: translateY(10px) scale(0.96); }
+  7%, 92% { opacity: 1; transform: translateY(0) scale(1); }
+  96%, 100% { opacity: 0; transform: translateY(5px) scale(0.98); }
+}
+@keyframes beeblio-sc-attach-chip {
+  0%, 8% { opacity: 0; transform: translateY(3px); }
+  12%, 92% { opacity: 1; transform: translateY(0); }
+  96%, 100% { opacity: 0; transform: translateY(3px); }
+}
 
 /* Quick Open chord: a quick tap at the top of the loop. The panel enters
    while these land, so the stage never waits on the keycaps. */

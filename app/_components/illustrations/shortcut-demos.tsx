@@ -5,6 +5,7 @@ import {
   BookOpen,
   BookOpenText,
   FolderOpen,
+  MessageSquareText,
   Search,
   type LucideIcon,
 } from "lucide-react";
@@ -33,6 +34,41 @@ export function QuickOpenKeys() {
       <kbd className="beeblio-keycap beeblio-sc-mod-key">{isMac ? "⌘" : "Ctrl"}</kbd>
       <span className="text-xs font-medium text-muted-foreground">+</span>
       <kbd className="beeblio-keycap beeblio-sc-p-key">P</kbd>
+    </div>
+  );
+}
+
+export function AddSelectionKeys() {
+  const isMac = useIsMac();
+  return (
+    <div className="beeblio-sc flex shrink-0 items-center gap-1.5" aria-hidden="true">
+      <kbd className="beeblio-keycap beeblio-sc-mod-key">{isMac ? "⌘" : "Ctrl"}</kbd>
+      <span className="text-xs font-medium text-muted-foreground">+</span>
+      <kbd className="beeblio-keycap beeblio-sc-p-key">L</kbd>
+    </div>
+  );
+}
+
+export function AddSelectionDemo({ className = "" }: { className?: string }) {
+  return (
+    <div className={`beeblio-sc beeblio-sc-stage beeblio-sc-stage--doc ${className}`} aria-hidden="true">
+      <div className="flex w-full max-w-[19rem] flex-col gap-2.5">
+        <div className="rounded-md border border-slate-200 bg-white px-2.5 py-2 text-[10px] leading-5 text-slate-700 shadow-sm">
+          <span>Our findings suggest that </span>
+          <span className="beeblio-sc-selection rounded-sm bg-blue-100 px-0.5 text-blue-900">attention improves retrieval quality</span>
+          <span> across tasks.</span>
+        </div>
+        <div className="beeblio-sc-chat rounded-lg border border-slate-200 bg-slate-50 p-2 shadow-sm">
+          <div className="mb-2 flex items-center gap-1.5 text-[9px] font-semibold text-slate-700">
+            <MessageSquareText className="size-3 text-blue-700" /> Ask Beeblio
+          </div>
+          <div className="beeblio-sc-attachment flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-2 py-1.5 text-[9px] text-blue-900">
+            <span className="shrink-0 font-semibold">Selection</span>
+            <span className="min-w-0 truncate">attention improves retrieval quality</span>
+          </div>
+          <div className="mt-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[9px] text-slate-400">Ask about this passage…</div>
+        </div>
+      </div>
     </div>
   );
 }
