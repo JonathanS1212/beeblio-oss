@@ -5,7 +5,6 @@ import { agentSessions, projects } from "@/db/schema";
 import { getUser } from "@/lib/auth/session";
 import { mintAgentToken } from "@/lib/agent-token";
 import { generateConversationTitle } from "@/lib/conversation-title";
-import { TURN_MODEL_DEADLINE_MS } from "@/agent/lib/model-timeout";
 
 export const dynamic = "force-dynamic";
 
@@ -20,12 +19,10 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
 
   const requestBody = req.method === "GET" || req.method === "HEAD" ? undefined : await req.text();
   if ((requestBody?.length ?? 0) > 64 * 1024) return new Response("Request too large", { status: 413 });
-  const isTurnSend = req.method === "POST" && isTurnRoute(targetPath);
   const headers = new Headers(req.headers);
   for (const name of ["host", "cookie", "transfer-encoding", "content-length", "connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailer", "upgrade", "accept-encoding", "x-credit-reservation-id", "x-credit-execution-class", "x-beeblio-model-source", "x-beeblio-model-id", "x-beeblio-model-context-window-tokens", "x-beeblio-app-session-id", "x-turn-model-deadline-at"]) headers.delete(name);
   headers.set("authorization", `Bearer ${mintAgentToken(user.id)}`);
   headers.set("x-model-source", "system");
-  if (isTurnSend) headers.set("x-turn-model-deadline-at", String(Date.now() + TURN_MODEL_DEADLINE_MS));
 
   if (targetPath === "v1/session" && req.method === "POST") {
     const appSessionId = req.headers.get("x-beeblio-app-session-id")?.trim();

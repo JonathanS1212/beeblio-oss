@@ -3,7 +3,7 @@ import { generateText } from "ai";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { readWorkspaceFile } from "../workspace-files";
-import { timedModelFetch, turnModelDeadline } from "../lib/model-timeout";
+import { timedModelFetch } from "../lib/model-timeout";
 import {
   resolveAuthenticatedWorkspace,
   toWorkspaceRelativePath,
@@ -78,7 +78,7 @@ export default defineTool({
 
     const openrouter = createOpenRouter({
       apiKey: process.env.OPENROUTER_API_KEY,
-      fetch: timedModelFetch(turnModelDeadline(auth?.attributes?.turnModelDeadlineAt)),
+      fetch: timedModelFetch(),
     });
     const result = await generateText({
       model: openrouter(modelId),

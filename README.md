@@ -45,6 +45,7 @@ The main agent needs `OPENROUTER_API_KEY`, `OPENROUTER_MODEL_ID`, and `OPENROUTE
 | Setting | Used for |
 | --- | --- |
 | `OPENROUTER_MODEL_ID_LITE` | Lightweight tasks such as conversation titles and sentence suggestions |
+| `OPENROUTER_REQUEST_TIMEOUT_MS` | Optional limit for one agent model request, in milliseconds; unset means no time limit. Agent turns have no fixed time limit. |
 | `OPENROUTER_MODEL_ID_REVIEW` | Document review; falls back to the main model |
 | `OPENROUTER_VISION_MODEL_ID` | Image analysis; falls back to the main model if it supports vision |
 | `GOOGLE_API_KEY`, `GOOGLE_TRANSCRIPTION_MODEL_ID` | Google key and selected transcription model for audio transcription |

@@ -30,12 +30,6 @@ export const proxyUserAuth: AuthFn<Request> = withAuthChallenges(
     const modelSource = request.headers.get("x-model-source") ?? undefined;
     const modelId = request.headers.get("x-model-id") ?? undefined;
     const modelContextWindowTokens = request.headers.get("x-model-context-window-tokens") ?? undefined;
-    const deadlineHeader = request.headers.get("x-turn-model-deadline-at");
-    const deadline = deadlineHeader ? Number(deadlineHeader) : NaN;
-    const turnModelDeadlineAt = Number.isSafeInteger(deadline) &&
-      deadline > Date.now() - 60_000 && deadline <= Date.now() + 300_000
-      ? deadline
-      : undefined;
 
     return {
       ...auth,
@@ -50,7 +44,6 @@ export const proxyUserAuth: AuthFn<Request> = withAuthChallenges(
         ...(modelSource ? { modelSource } : {}),
         ...(modelId ? { modelId } : {}),
         ...(modelContextWindowTokens ? { modelContextWindowTokens } : {}),
-        ...(turnModelDeadlineAt ? { turnModelDeadlineAt: String(turnModelDeadlineAt) } : {}),
       },
     };
   },
