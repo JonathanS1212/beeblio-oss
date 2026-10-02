@@ -1,5 +1,5 @@
 import { matrixFieldKeys, otherFieldKey } from "./columns.ts";
-import { FORM_RUNTIME_CSS, FORM_RUNTIME_JS } from "./runtime.ts";
+import { FORM_RUNTIME_CSS, FORM_RUNTIME_JS, withFormTheme } from "./runtime.ts";
 import {
   FORM_DEFINITION_SCRIPT_ID,
   FORM_MARKER_CONTENT,
@@ -245,7 +245,7 @@ export function generateFormHtml(definition: FormDefinition): string {
   // parsers read \u003c back as "<", keeping the definition byte-identical.
   const definitionJson = JSON.stringify(definition, null, 2).replace(/</g, "\\u003c");
 
-  return `<!doctype html>
+  return withFormTheme(`<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -278,5 +278,5 @@ ${FORM_RUNTIME_JS}
 </script>
 </body>
 </html>
-`;
+`);
 }

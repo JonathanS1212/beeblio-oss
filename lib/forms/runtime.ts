@@ -13,7 +13,7 @@
 
 export const FORM_RUNTIME_CSS = `
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --bf-bg: oklch(0.975 0.008 88);
   --bf-fg: oklch(0.235 0.02 250);
   --bf-card: oklch(0.995 0.004 88);
@@ -26,28 +26,6 @@ export const FORM_RUNTIME_CSS = `
   --bf-accent: oklch(0.92 0.035 235);
   --bf-destructive: oklch(0.577 0.245 27.325);
   --bf-radius: 0.75rem;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bf-bg: oklch(0.17 0.014 250);
-    --bf-fg: oklch(0.94 0.01 92);
-    --bf-card: oklch(0.205 0.016 250);
-    --bf-primary: oklch(0.72 0.09 240);
-    --bf-primary-fg: oklch(0.17 0.02 250);
-    --bf-muted: oklch(0.69 0.025 240);
-    --bf-border: oklch(0.42 0.02 245 / 45%);
-    --bf-input: oklch(0.45 0.025 245 / 55%);
-    --bf-ring: oklch(0.68 0.09 240);
-    --bf-accent: oklch(0.29 0.035 240);
-    --bf-destructive: oklch(0.704 0.191 22.216);
-  }
-  .bf-form-header, .bf-block { box-shadow: 0 1px 2px rgb(0 0 0 / 0.25); }
-  input[type="text"], input[type="email"], input[type="number"], input[type="date"], textarea, select {
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
-  }
-  select {
-    background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23a6adbd'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='m6%209%206%206%206-6'/%3E%3C/svg%3E");
-  }
 }
 * { box-sizing: border-box; }
 /* Class display rules (.bf-btn, …) would otherwise outrank the UA's
@@ -220,6 +198,96 @@ table.bf-matrix { border-collapse: collapse; width: 100%; min-width: 480px; }
   .bf-brand svg { width: 20px; height: 20px; }
 }
 `.trim();
+
+// Appended after the form's own stylesheet so even previously saved forms
+// (which used a device-dark media query) start in light mode when shared.
+export const FORM_THEME_CSS = `
+:root {
+  color-scheme: light;
+  --bf-bg: oklch(0.975 0.008 88);
+  --bf-fg: oklch(0.235 0.02 250);
+  --bf-card: oklch(0.995 0.004 88);
+  --bf-primary: oklch(0.4 0.085 245);
+  --bf-primary-fg: oklch(0.985 0.006 88);
+  --bf-muted: oklch(0.52 0.026 240);
+  --bf-border: oklch(0.882 0.017 91);
+  --bf-input: oklch(0.875 0.018 91);
+  --bf-ring: oklch(0.58 0.1 245);
+  --bf-accent: oklch(0.92 0.035 235);
+  --bf-destructive: oklch(0.577 0.245 27.325);
+}
+:root.bf-dark {
+  color-scheme: dark;
+  --bf-bg: oklch(0.17 0.014 250);
+  --bf-fg: oklch(0.94 0.01 92);
+  --bf-card: oklch(0.205 0.016 250);
+  --bf-primary: oklch(0.72 0.09 240);
+  --bf-primary-fg: oklch(0.17 0.02 250);
+  --bf-muted: oklch(0.69 0.025 240);
+  --bf-border: oklch(0.42 0.02 245 / 45%);
+  --bf-input: oklch(0.45 0.025 245 / 55%);
+  --bf-ring: oklch(0.68 0.09 240);
+  --bf-accent: oklch(0.29 0.035 240);
+  --bf-destructive: oklch(0.704 0.191 22.216);
+}
+:root .bf-form-header, :root .bf-block {
+  box-shadow: 0 1px 2px rgb(18 35 48 / 0.05), 0 1px 3px rgb(18 35 48 / 0.04);
+}
+:root.bf-dark .bf-form-header, :root.bf-dark .bf-block { box-shadow: 0 1px 2px rgb(0 0 0 / 0.25); }
+:root input[type="text"], :root input[type="email"], :root input[type="number"], :root input[type="date"], :root textarea, :root select {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 1px 2px rgb(18 35 48 / 0.04);
+}
+:root.bf-dark input[type="text"], :root.bf-dark input[type="email"], :root.bf-dark input[type="number"], :root.bf-dark input[type="date"], :root.bf-dark textarea, :root.bf-dark select {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+:root select {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%236b7484'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='m6%209%206%206%206-6'/%3E%3C/svg%3E");
+}
+:root.bf-dark select {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23a6adbd'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='m6%209%206%206%206-6'/%3E%3C/svg%3E");
+}
+#bf-theme-toggle {
+  position: fixed; right: 16px; bottom: 16px; z-index: 100;
+  display: grid; place-items: center; width: 36px; height: 36px;
+  border: 1px solid var(--bf-border); border-radius: 999px;
+  background: var(--bf-card); color: var(--bf-fg);
+  box-shadow: 0 2px 8px rgb(18 35 48 / 0.15); cursor: pointer;
+}
+#bf-theme-toggle:hover { background: var(--bf-accent); }
+#bf-theme-toggle:focus-visible { outline: 2px solid var(--bf-ring); outline-offset: 2px; }
+#bf-theme-toggle svg { width: 18px; height: 18px; }
+@media (max-width: 520px) { #bf-theme-toggle { right: 12px; bottom: 12px; } }
+`.trim();
+
+export const FORM_THEME_JS = `
+(function () {
+  var button = document.getElementById("bf-theme-toggle");
+  if (!button) return;
+  var root = document.documentElement;
+  function render() {
+    var dark = root.classList.contains("bf-dark");
+    button.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+    button.title = dark ? "Light mode" : "Dark mode";
+    button.innerHTML = dark
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/></svg>';
+  }
+  button.addEventListener("click", function () {
+    root.classList.toggle("bf-dark");
+    render();
+  });
+  render();
+})();
+`.trim();
+
+/** Adds the same standalone toggle to new and already-saved form HTML. */
+export function withFormTheme(html: string): string {
+  if (html.includes('id="bf-theme-toggle"')) return html;
+  const style = `<style id="bf-theme-style">\n${FORM_THEME_CSS}\n</style>`;
+  const toggle = '<button id="bf-theme-toggle" type="button" aria-label="Switch to dark mode"></button>';
+  const script = `<script>\n${FORM_THEME_JS}\n</script>`;
+  return html.replace(/<\/head>/i, `${style}\n</head>`).replace(/<\/body>/i, `${toggle}\n${script}\n</body>`);
+}
 
 export const FORM_RUNTIME_JS = `
 (function () {

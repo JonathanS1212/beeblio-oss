@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { UserMenu } from "@/app/_components/user-menu";
-import { ForceLightTheme } from "@/app/_components/force-light-theme";
 import { requireUser } from "@/lib/auth/session";
 import {
   parseProjectSettings,
@@ -95,7 +94,6 @@ export default async function ProjectLayout({
 
   return (
     <>
-      <ForceLightTheme />
       <UpcomingFeatureDialog />
       <ProjectLayoutUI
       projectId={projectId}
@@ -112,7 +110,6 @@ export default async function ProjectLayout({
           key="project-user-menu"
           user={{ name: user.name, email: user.email, image: user.image }}
           projectId={project ? projectId : undefined}
-          showThemeSwitcher={false}
           initialSettings={settings}
           projectName={project?.name}
           projectDescription={project?.description ?? ""}

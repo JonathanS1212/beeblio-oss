@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { publicFiles, projects } from "@/db/schema";
+import { withFormTheme } from "@/lib/forms/runtime";
 import {
   readAgentWorkspaceFile,
   AgentWorkspaceError,
@@ -20,29 +21,12 @@ const HTML_IMAGE_SOURCE = /<img[^>]+src=["']([^"']+)["']/gi;
 // Existing form files embed their own light/dark CSS, so add this bridge when
 // serving a shared form. The parent can switch its theme without reloading the
 // sandboxed iframe and discarding a respondent's in-progress answers.
-const FORM_THEME_BRIDGE = `<script>
+const FORM_THEME_BRIDGE = `<style>html.bf-embedded #bf-theme-toggle { display: none !important; }</style><script>
+if (window !== window.parent) document.documentElement.classList.add("bf-embedded");
 window.addEventListener("message", function (event) {
   if (event.source !== window.parent || !event.data || event.data.type !== "beeblio:theme") return;
-  var theme = event.data.theme;
-  if (theme !== "light" && theme !== "dark") return;
-  var colors = theme === "dark" ? {
-    "--bf-bg": "oklch(0.17 0.014 250)", "--bf-fg": "oklch(0.94 0.01 92)",
-    "--bf-card": "oklch(0.205 0.016 250)", "--bf-primary": "oklch(0.72 0.09 240)",
-    "--bf-primary-fg": "oklch(0.17 0.02 250)", "--bf-muted": "oklch(0.69 0.025 240)",
-    "--bf-border": "oklch(0.42 0.02 245 / 45%)", "--bf-input": "oklch(0.45 0.025 245 / 55%)",
-    "--bf-ring": "oklch(0.68 0.09 240)", "--bf-accent": "oklch(0.29 0.035 240)",
-    "--bf-destructive": "oklch(0.704 0.191 22.216)"
-  } : {
-    "--bf-bg": "oklch(0.975 0.008 88)", "--bf-fg": "oklch(0.235 0.02 250)",
-    "--bf-card": "oklch(0.995 0.004 88)", "--bf-primary": "oklch(0.4 0.085 245)",
-    "--bf-primary-fg": "oklch(0.985 0.006 88)", "--bf-muted": "oklch(0.52 0.026 240)",
-    "--bf-border": "oklch(0.882 0.017 91)", "--bf-input": "oklch(0.875 0.018 91)",
-    "--bf-ring": "oklch(0.58 0.1 245)", "--bf-accent": "oklch(0.92 0.035 235)",
-    "--bf-destructive": "oklch(0.577 0.245 27.325)"
-  };
-  var root = document.documentElement;
-  Object.keys(colors).forEach(function (name) { root.style.setProperty(name, colors[name]); });
-  root.style.colorScheme = theme;
+  if (event.data.theme !== "light" && event.data.theme !== "dark") return;
+  document.documentElement.classList.toggle("bf-dark", event.data.theme === "dark");
 });
 </script>`;
 
@@ -151,9 +135,10 @@ async function serveAsset(
     if (rel === fileRecord.filePath && rel.toLowerCase().endsWith(".form.html")) {
       const response = await readAgentWorkspaceFile(project.userId, project.slug, rel);
       const html = await response.text();
-      const themedHtml = /<\/head>/i.test(html)
-        ? html.replace(/<\/head>/i, `${FORM_THEME_BRIDGE}</head>`)
-        : `${FORM_THEME_BRIDGE}${html}`;
+      const formHtml = withFormTheme(html);
+      const themedHtml = /<\/head>/i.test(formHtml)
+        ? formHtml.replace(/<\/head>/i, `${FORM_THEME_BRIDGE}</head>`)
+        : `${FORM_THEME_BRIDGE}${formHtml}`;
       return new Response(head ? null : themedHtml, {
         headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
       });

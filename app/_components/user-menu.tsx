@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, Globe, Monitor, Moon, Settings, Sun, User } from "lucide-react";
+import { ArrowUpRight, Globe, Moon, Settings, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,8 +19,6 @@ import type { ProjectSettings } from "@/lib/project-settings";
  * projectId is passed only by the project rail layout, so the per-project
  * settings entry appears there and not in the workspace header.
  * initialSettings (layout-provided) lets the dialog open without refetching.
- * The project route pins the light theme, so its menu hides the switcher —
- * the choice still applies on every other route's menu.
  * The local identity is supplied by the server.
  */
 export function UserMenu({
@@ -30,7 +28,6 @@ export function UserMenu({
   projectName,
   projectDescription,
   resolvedDefaultFile,
-  showThemeSwitcher = true,
 }: {
   user?: { name?: string | null; email: string; image?: string | null };
   projectId?: string;
@@ -38,7 +35,6 @@ export function UserMenu({
   projectName?: string;
   projectDescription?: string;
   resolvedDefaultFile?: string;
-  showThemeSwitcher?: boolean;
 }) {
   const { setTheme, theme } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -48,7 +44,7 @@ export function UserMenu({
 
   const name = user.name || user.email;
   const initial = name ? name.charAt(0).toUpperCase() : <User className="h-4 w-4" />;
-  const ThemeIcon = theme === "dark" ? Moon : theme === "system" ? Monitor : Sun;
+  const ThemeIcon = theme === "dark" ? Moon : Sun;
 
   return (
     <>
@@ -76,38 +72,33 @@ export function UserMenu({
               <span>Project Settings</span>
             </DropdownMenuItem>
           ) : null}
-          {showThemeSwitcher ? (
-            <>
-              <div className="flex min-h-10 items-center gap-2 px-2.5 py-1.5" role="group" aria-label="Theme">
-              <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-                <ThemeIcon className="size-4 text-muted-foreground" />
-                Theme
-              </span>
-              <div className="flex items-center rounded-lg bg-muted/70 p-0.5">
-                {[
-                  { value: "light", label: "Light", Icon: Sun },
-                  { value: "dark", label: "Dark", Icon: Moon },
-                  { value: "system", label: "System", Icon: Monitor },
-                ].map(({ value, label, Icon }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-label={label}
-                    aria-pressed={theme === value}
-                    title={label}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setTheme(value);
-                    }}
-                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-card hover:text-foreground aria-pressed:bg-card aria-pressed:text-primary aria-pressed:shadow-sm"
-                  >
-                    <Icon className="size-3.5" />
-                  </button>
-                ))}
-              </div>
-              </div>
-            </>
-          ) : null}
+          <div className="flex min-h-10 items-center gap-2 px-2.5 py-1.5" role="group" aria-label="Theme">
+            <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+              <ThemeIcon className="size-4 text-muted-foreground" />
+              Theme
+            </span>
+            <div className="flex items-center rounded-lg bg-muted/70 p-0.5">
+              {[
+                { value: "light", label: "Light", Icon: Sun },
+                { value: "dark", label: "Dark", Icon: Moon },
+              ].map(({ value, label, Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-label={label}
+                  aria-pressed={theme === value}
+                  title={label}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setTheme(value);
+                  }}
+                  className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-card hover:text-foreground aria-pressed:bg-card aria-pressed:text-primary aria-pressed:shadow-sm"
+                >
+                  <Icon className="size-3.5" />
+                </button>
+              ))}
+            </div>
+          </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <a href="https://beeblio.raihankalla.id">
