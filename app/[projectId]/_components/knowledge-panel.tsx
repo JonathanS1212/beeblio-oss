@@ -16,7 +16,7 @@ import { REFERENCES_DIRECTORY } from "@/lib/research-workspace";
 import { cn } from "@/lib/utils";
 import { getWorkspaceDragPaths } from "@/lib/workspace-drag";
 import { uploadWorkspaceFile } from "@/lib/workspace-upload";
-import { addFileToKnowledge, listKnowledgeDocuments, removeFileFromKnowledge, searchKnowledge } from "../knowledge-actions";
+import { addFileToKnowledge, listKnowledgeDocuments, removeFileFromKnowledge } from "../knowledge-actions";
 import { listAllFiles, type FileEntry } from "../file-actions";
 
 type KnowledgePanelSnapshot = {
@@ -50,15 +50,20 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
   const [busyPaths, setBusyPaths] = useState<Set<string>>(() => new Set());
   const [isDragging, setIsDragging] = useState(false);
   const searchRequestRef = useRef(0);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   const clearSearch = useCallback(() => {
     searchRequestRef.current += 1;
+    searchAbortRef.current?.abort();
+    searchAbortRef.current = null;
     knowledgeSearchCache.delete(projectId);
     setQuery("");
     setSearchResult(null);
     setSearchError(undefined);
     setIsSearching(false);
   }, [projectId]);
+
+  useEffect(() => () => searchAbortRef.current?.abort(), []);
 
   const refresh = useCallback(async () => {
     try {
@@ -99,19 +104,69 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
     const submittedQuery = query.trim();
     if (submittedQuery.length < 2 || isSearching || readyCount === 0) return;
     const requestId = ++searchRequestRef.current;
+    const abortController = new AbortController();
+    searchAbortRef.current = abortController;
     setIsSearching(true);
     setSearchError(undefined);
+    setSearchResult({ answer: "", citations: [] });
     try {
-      const result = await searchKnowledge(projectId, submittedQuery);
-      if (requestId !== searchRequestRef.current) return;
-      knowledgeSearchCache.set(projectId, { query: submittedQuery, result });
-      setQuery(submittedQuery);
-      setSearchResult(result);
+      const response = await fetch("/api/knowledge/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, query: submittedQuery }),
+        signal: abortController.signal,
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error ?? "Knowledge search failed.");
+      }
+      if (!response.body) throw new Error("Knowledge search did not return a stream.");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let completed = false;
+      const handleEvent = (line: string) => {
+        const event = JSON.parse(line) as
+          | { type: "delta"; text: string }
+          | { type: "result"; result: KnowledgeSearchResult }
+          | { type: "error"; message: string };
+        if (requestId !== searchRequestRef.current) return;
+        if (event.type === "delta") {
+          setSearchResult((current) => ({ answer: (current?.answer ?? "") + event.text, citations: current?.citations ?? [] }));
+        } else if (event.type === "result") {
+          completed = true;
+          knowledgeSearchCache.set(projectId, { query: submittedQuery, result: event.result });
+          setQuery(submittedQuery);
+          setSearchResult(event.result);
+        } else if (event.type === "error") {
+          throw new Error(event.message);
+        }
+      };
+      while (true) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        let newline = buffer.indexOf("\n");
+        while (newline !== -1) {
+          const line = buffer.slice(0, newline);
+          buffer = buffer.slice(newline + 1);
+          if (line) handleEvent(line);
+          newline = buffer.indexOf("\n");
+        }
+        if (done) break;
+      }
+      if (buffer.trim()) handleEvent(buffer);
+      if (!completed && requestId === searchRequestRef.current) throw new Error("Knowledge search ended before the answer was complete.");
     } catch (error) {
       if (requestId !== searchRequestRef.current) return;
-      setSearchError(error instanceof Error ? error.message : "Knowledge search failed.");
+      if (!abortController.signal.aborted) {
+        setSearchError(error instanceof Error ? error.message : "Knowledge search failed.");
+        setSearchResult((current) => current?.answer ? current : null);
+      }
     } finally {
-      if (requestId === searchRequestRef.current) setIsSearching(false);
+      if (requestId === searchRequestRef.current) {
+        searchAbortRef.current = null;
+        setIsSearching(false);
+      }
     }
   };
 
@@ -194,14 +249,13 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
         {isSearching ? <Loader2 className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" /> : <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />}
         <Input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Knowledge…" aria-label="Search Knowledge" className="h-8 pl-7 text-xs md:text-xs" disabled={loading || readyCount === 0} /></div>
         <Button type="button" size="icon-sm" variant="default" className="shrink-0 rounded-full"
-        //  onClick={() => notifyUpcomingFeature("Add to Knowledge")}
         onClick={() => setPickerOpen(true)}
         aria-label="Add file to Knowledge" title="Add file to Knowledge"><Plus /></Button>
       </form>
       {searchError ? <p className="text-[10px] text-destructive" role="alert">{searchError}</p> : null}
     </div>
     <div className="min-h-0 flex-1 overflow-y-auto p-2">
-      {loading ? <div className="flex h-28 items-center justify-center"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div> : searchResult ? <KnowledgeSearchResults result={searchResult} files={files} onOpenFile={onOpenFile} onClear={clearSearch} /> : documents.length ? <div className="space-y-1">
+      {loading ? <div className="flex h-28 items-center justify-center"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div> : searchResult ? <KnowledgeSearchResults result={searchResult} files={files} onOpenFile={onOpenFile} onClear={clearSearch} isSearching={isSearching} hasError={Boolean(searchError)} /> : documents.length ? <div className="space-y-1">
         {documents.map((document) => {
           const file = files.find((item) => item.path === document.filePath);
           const busy = busyPaths.has(document.filePath);
@@ -218,7 +272,6 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
         })}
       </div> : <div className="flex h-52 flex-col items-center justify-center px-5 text-center"><span className="mb-3 flex size-10 items-center justify-center rounded-xl bg-primary/8 text-primary"><BookMarked className="size-5" /></span><p className="text-sm font-medium">No Knowledge files yet</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Add a workspace file so the agent can search it without attaching it to every chat.</p>
         <Button size="sm" className="mt-4"
-        //  onClick={() => notifyUpcomingFeature("Add to Knowledge")}
         onClick={() => setPickerOpen(true)}
         >
           <Plus />Add file</Button></div>}
@@ -244,13 +297,14 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
   </div>;
 }
 
-function KnowledgeSearchResults({ result, files, onOpenFile, onClear }: { result: KnowledgeSearchResult; files: FileEntry[]; onOpenFile: (file: FileEntry, pinned?: boolean) => void; onClear: () => void }) {
+function KnowledgeSearchResults({ result, files, onOpenFile, onClear, isSearching, hasError }: { result: KnowledgeSearchResult; files: FileEntry[]; onOpenFile: (file: FileEntry, pinned?: boolean) => void; onClear: () => void; isSearching: boolean; hasError: boolean }) {
   return <div className="space-y-3 p-1">
     <div className="flex items-center justify-between gap-2">
       <Button type="button" size="xs" variant="ghost" onClick={onClear}><ArrowLeft />Knowledge Files</Button>
     </div>
     <div className="rounded-xl border bg-card p-3 text-xs leading-5">
-      <MessageResponse className="knowledge-answer-markdown text-xs leading-5">{result.answer}</MessageResponse>
+      {result.answer ? <MessageResponse className="knowledge-answer-markdown text-xs leading-5">{result.answer}</MessageResponse> : null}
+      {isSearching ? <div className={cn("flex items-center gap-1.5 text-[11px] text-muted-foreground", result.answer && "mt-2")} role="status"><Loader2 className="size-3 animate-spin" />{result.answer ? "Still generating…" : "Searching your files…"}</div> : null}
     </div>
     {result.citations.length ? <div>
       <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sources</p>
@@ -282,6 +336,6 @@ function KnowledgeSearchResults({ result, files, onOpenFile, onClear }: { result
           </CollapsibleContent>
         </Collapsible>;
       })}</div>
-    </div> : <p className="px-2 text-[11px] text-muted-foreground">No source passages were returned for this answer.</p>}
+    </div> : !isSearching && !hasError ? <p className="px-2 text-[11px] text-muted-foreground">No source passages were returned for this answer.</p> : null}
   </div>;
 }

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -10,10 +9,7 @@ import {
   processKnowledgeDocument,
   queueKnowledgeFile,
   removeKnowledgeDocument,
-  searchProjectKnowledge,
 } from "@/lib/knowledge";
-
-const knowledgeQuerySchema = z.string().trim().min(2).max(2_000);
 
 export async function listKnowledgeDocuments(projectId: string) {
   const user = await requireUser();
@@ -47,10 +43,4 @@ export async function removeFileFromKnowledge(projectId: string, documentId: str
   const user = await requireUser();
   await removeKnowledgeDocument(user.id, projectId, documentId);
   revalidatePath(`/${projectId}`);
-}
-
-export async function searchKnowledge(projectId: string, rawQuery: string) {
-  const user = await requireUser();
-  const query = knowledgeQuerySchema.parse(rawQuery);
-  return (await searchProjectKnowledge(user.id, projectId, query)).result;
 }
