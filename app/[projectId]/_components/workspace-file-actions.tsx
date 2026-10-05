@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   BookMarked, ChevronRight, Copy, Download, Edit2, Folder, FolderInput, Loader2,
-  MoreVertical, Paperclip, Share2, Trash2,
+  MoreVertical, Paperclip, Share2, Table2, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,10 +45,12 @@ export function WorkspaceFileActions({
   projectId,
   file,
   className,
+  onAddToMatrix,
 }: {
   projectId: string;
   file: FileEntry;
   className?: string;
+  onAddToMatrix?: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -275,6 +277,7 @@ export function WorkspaceFileActions({
           //  onClick={() => notifyUpcomingFeature("Add to Knowledge")}
           onClick={() => void addToKnowledge()}
           ><BookMarked />Add to Knowledge</DropdownMenuItem> : null}
+          {onAddToMatrix ? <DropdownMenuItem onSelect={onAddToMatrix}><Table2 />Add to Matrix</DropdownMenuItem> : null}
           <DropdownMenuItem onClick={() => {
             if (affectsProtectedWorkspacePath(file.path)) return toast.error("This workspace item is protected");
             setMoveError(undefined);

@@ -69,6 +69,7 @@ import { fileUrl } from "./file-viewer";
 import { editorLoadsTextContent } from "./editors/registry";
 import { prefetchTextFile } from "./editors/text-content-cache";
 import { WorkspaceFileActions } from "./workspace-file-actions";
+import { MatrixTargetDialog, useMatrixAdd } from "./matrix-add";
 import { BibliographyAddMenu } from "./bibliography-add-menu";
 
 export type ResearchArtifactView = "references" | "data" | "analysis" | "reports" | "figures";
@@ -682,6 +683,10 @@ function ReferencesList({
   activeFilePath,
   onOpenFile,
 }: ArtifactListProps & { matrices: FileEntry[] }) {
+  const matrixAdd = useMatrixAdd(projectId);
+  const addPdfToMatrix = useCallback((file: FileEntry) => {
+    matrixAdd.add({ kind: "pdf", path: file.path });
+  }, [matrixAdd.add]);
   // The bibliography database leads the list, matrices follow as a labeled
   // group, and the remaining reference files close it out. The "References"
   // label appears only when matrices are on screen, so matrix-free projects
@@ -702,7 +707,7 @@ function ReferencesList({
   return (
     <div className="space-y-1">
       {canonical.map((file) => (
-        <ReferenceRow key={file.path} file={file} projectId={projectId} activeFilePath={activeFilePath} onOpenFile={onOpenFile} />
+        <ReferenceRow key={file.path} file={file} projectId={projectId} activeFilePath={activeFilePath} onOpenFile={onOpenFile} onAddPdfToMatrix={addPdfToMatrix} />
       ))}
       <MatricesGroup matrices={matrices} projectId={projectId} activeFilePath={activeFilePath} onOpenFile={onOpenFile} />
       {others.length ? matrices.length ? (
@@ -712,15 +717,25 @@ function ReferencesList({
           </p>
           <div className="space-y-1">
             {others.map((file) => (
-              <ReferenceRow key={file.path} file={file} projectId={projectId} activeFilePath={activeFilePath} onOpenFile={onOpenFile} />
+              <ReferenceRow key={file.path} file={file} projectId={projectId} activeFilePath={activeFilePath} onOpenFile={onOpenFile} onAddPdfToMatrix={addPdfToMatrix} />
             ))}
           </div>
         </section>
       ) : (
         others.map((file) => (
-          <ReferenceRow key={file.path} file={file} projectId={projectId} activeFilePath={activeFilePath} onOpenFile={onOpenFile} />
+          <ReferenceRow key={file.path} file={file} projectId={projectId} activeFilePath={activeFilePath} onOpenFile={onOpenFile} onAddPdfToMatrix={addPdfToMatrix} />
         ))
       ) : null}
+      <MatrixTargetDialog
+        projectId={projectId}
+        open={matrixAdd.pickerOpen}
+        targets={matrixAdd.targets}
+        saving={matrixAdd.saving}
+        savingPath={matrixAdd.savingPath}
+        memberPaths={matrixAdd.memberPaths}
+        onCancel={matrixAdd.cancel}
+        onPick={matrixAdd.pick}
+      />
     </div>
   );
 }
@@ -730,11 +745,13 @@ function ReferenceRow({
   projectId,
   activeFilePath,
   onOpenFile,
+  onAddPdfToMatrix,
 }: {
   file: FileEntry;
   projectId: string;
   activeFilePath?: string;
   onOpenFile: (file: FileEntry, pinned?: boolean) => void;
+  onAddPdfToMatrix: (file: FileEntry) => void;
 }) {
   const isCanonical = file.path === PROJECT_BIBLIOGRAPHY_PATH;
   const extension = extensionOf(file.name);
@@ -787,7 +804,7 @@ function ReferenceRow({
           <span className="tabular-nums">{formatBytes(file.size)}</span>
         </span>
       </button>
-      {!isCanonical ? <ArtifactActions projectId={projectId} file={file} /> : null}
+      {!isCanonical ? <ArtifactActions projectId={projectId} file={file} onAddToMatrix={extension === "pdf" ? () => onAddPdfToMatrix(file) : undefined} /> : null}
     </div>
   );
 }
@@ -1261,8 +1278,8 @@ type ArtifactListProps = {
   onOpenFile: (file: FileEntry, pinned?: boolean) => void;
 };
 
-function ArtifactActions({ projectId, file, className }: { projectId: string; file: FileEntry; className?: string }) {
-  return <WorkspaceFileActions projectId={projectId} file={file} className={cn(
+function ArtifactActions({ projectId, file, className, onAddToMatrix }: { projectId: string; file: FileEntry; className?: string; onAddToMatrix?: () => void }) {
+  return <WorkspaceFileActions projectId={projectId} file={file} onAddToMatrix={onAddToMatrix} className={cn(
     "absolute right-1 top-1/2 z-10 -translate-y-1/2 opacity-70 transition-opacity group-focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100",
     className,
   )} />;

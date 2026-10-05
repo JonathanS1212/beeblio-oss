@@ -278,7 +278,9 @@ async function extractPdfHeader(bytes: Uint8Array) {
  * exists.
  */
 async function matchPaperWork(userId: string, projectId: string, workspacePath: string) {
-  if (path.posix.dirname(workspacePath) !== REFERENCES_DIRECTORY || !workspacePath.toLocaleLowerCase().endsWith(".pdf")) throw new Error("Choose a PDF paper.");
+  if (!workspacePath.startsWith(`${REFERENCES_DIRECTORY}/`) ||
+    workspacePath.split("/").some((segment) => !segment || segment === "." || segment === "..") ||
+    !workspacePath.toLocaleLowerCase().endsWith(".pdf")) throw new Error("Choose a PDF paper.");
   const fileResponse = await readAgentWorkspaceFile(userId, projectId, workspacePath);
   const size = Number(fileResponse.headers.get("content-length") ?? 0);
   if (size > integerEnv("MAX_PAPER_IMPORT_BYTES", 50_000_000, 1)) throw new Error("The PDF exceeds the 50 MB limit.");
@@ -294,19 +296,19 @@ async function matchPaperWork(userId: string, projectId: string, workspacePath: 
   if (!doi && titleAgreement(work.title[0], `${header.title} ${header.text.slice(0, 4_000)}`) < 0.6) {
     throw new Error("The closest metadata result did not match the PDF title closely enough. Try manual entry instead.");
   }
-  return { work, title: work.title[0], doi, safeName };
+  return { work, title: work.title[0], doi };
 }
 
 export async function importPaperCitation(projectId: string, workspacePath: string) {
   try {
     const user = await requireProject(projectId);
-    const { work, title, doi, safeName } = await matchPaperWork(user.id, projectId, workspacePath);
+    const { work, title, doi } = await matchPaperWork(user.id, projectId, workspacePath);
     const current = await readBibliography(user.id, projectId);
     // JabRef/Zotero file-attachment convention (<path>:PDF): lets reference
     // managers and the agent resolve the entry back to the stored PDF.
     const result = appendManualEntries(current, [{
       ...workInput(work),
-      file: `${REFERENCES_DIRECTORY}/${safeName}:PDF`,
+      file: `${workspacePath}:PDF`,
     }]);
     const added = result.added.filter((candidate) => !candidate.alreadyExisted).length;
     if (added > 0) {
@@ -336,7 +338,7 @@ export async function importPaperCitation(projectId: string, workspacePath: stri
 export async function extractPaperReference(projectId: string, workspacePath: string) {
   try {
     const user = await requireProject(projectId);
-    const { work, doi, safeName } = await matchPaperWork(user.id, projectId, workspacePath);
+    const { work, doi } = await matchPaperWork(user.id, projectId, workspacePath);
     const input = workInput(work);
     return {
       success: true as const,
@@ -344,7 +346,7 @@ export async function extractPaperReference(projectId: string, workspacePath: st
         ...input,
         key: "",
         doi: input.doi || doi || "",
-        file: `${REFERENCES_DIRECTORY}/${safeName}:PDF`,
+        file: `${workspacePath}:PDF`,
         note: "",
         editor: "",
         edition: "",

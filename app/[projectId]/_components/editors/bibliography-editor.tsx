@@ -35,6 +35,7 @@ import { usePublicView } from "@/app/share/[shareId]/_components/public-view-con
 import { ReferenceSheet, type ReferenceDetail, type ReferenceDraft } from "../reference-sheet";
 import { draftFromBibtexEntry, updateBibtexSourceWithDraft } from "../reference-bibtex";
 import { MatrixTargetDialog, useMatrixAdd } from "../matrix-add";
+import { rememberCitationMatrixPaths } from "../matrix-membership-cache";
 import { addBibliographyEntry } from "../../bibliography-actions";
 import { getCitationMatrixLocations } from "../../matrix-actions";
 import { EditorShell } from "./editor-shell";
@@ -118,6 +119,7 @@ export function BibliographyEditor({ projectId, file, sourceUrl, onSaved }: Work
         projectId,
         entries: currentCitations.map((c) => ({ citationKey: c.id, doi: c.doi })),
       });
+      rememberCitationMatrixPaths(projectId, result.paths);
       const keys = new Set<string>();
       for (const [key, paths] of Object.entries(result.paths)) {
         if (paths.length > 0) keys.add(key);
@@ -319,11 +321,12 @@ export function BibliographyEditor({ projectId, file, sourceUrl, onSaved }: Work
       </AlertDialogContent>
     </AlertDialog>
     <MatrixTargetDialog
+      projectId={projectId}
       open={matrixAdd.pickerOpen}
       targets={matrixAdd.targets}
       saving={matrixAdd.saving}
+      savingPath={matrixAdd.savingPath}
       memberPaths={matrixAdd.memberPaths}
-      memberPathsLoading={matrixAdd.memberPathsLoading}
       onCancel={matrixAdd.cancel}
       onPick={matrixAdd.pick}
     />

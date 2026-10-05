@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Check, Loader2, Plus, Table2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,19 +18,21 @@ import type { LiteratureItem } from "@/lib/literature/types";
 import { PROJECT_BIBLIOGRAPHY_PATH } from "@/lib/project-bibliography";
 import { cn } from "@/lib/utils";
 import { announceWorkspaceChange, type WorkspaceChangedFile } from "@/lib/workspace-change";
+import { dispatchWorkspaceMutation } from "@/lib/workspace-mutations";
 import {
   addCitationsToMatrix,
   addLiteratureItemsToMatrix,
+  addPdfToMatrix,
   createMatrixFile,
-  getCitationMatrixLocations,
-  getMatrixSavedState,
-  listMatrixFiles,
   type MatrixFileSummary,
 } from "../matrix-actions";
+import { useMatrixTargets } from "./matrix-targets-context";
+import { matrixPathsForRequest, rememberMatrixCommit } from "./matrix-membership-cache";
 
 export type MatrixAddRequest =
   | { kind: "literature"; items: LiteratureItem[] }
-  | { kind: "citations"; entries: MatrixCitationEntry[] };
+  | { kind: "citations"; entries: MatrixCitationEntry[] }
+  | { kind: "pdf"; path: string };
 
 /**
  * Shared add-to-matrix flow for the literature search panel and the
@@ -45,42 +47,29 @@ export function useMatrixAdd(
   onCommitSuccess?: (request: MatrixAddRequest) => void,
   enabled = true,
 ) {
-  const [targets, setTargets] = useState<MatrixFileSummary[]>();
+  const targets = useMatrixTargets();
   const [saving, setSaving] = useState(false);
   const [pending, setPending] = useState<MatrixAddRequest>();
   const [memberPaths, setMemberPaths] = useState<string[]>();
-  const [memberPathsLoading, setMemberPathsLoading] = useState(false);
-  const initialRefreshProjectRef = useRef<string | undefined>(undefined);
-
-  const refresh = useCallback(async () => {
-    if (!enabled) return;
-    try {
-      setTargets(await listMatrixFiles(projectId));
-    } catch {
-      setTargets([]);
-    }
-  }, [projectId, enabled]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    if (initialRefreshProjectRef.current !== projectId) {
-      initialRefreshProjectRef.current = projectId;
-      void refresh();
-    }
-    const onChange = () => void refresh();
-    window.addEventListener("beeblio:workspace-changed", onChange);
-    return () => window.removeEventListener("beeblio:workspace-changed", onChange);
-  }, [projectId, refresh]);
+  const [savingPath, setSavingPath] = useState<string>();
 
   const commit = useCallback(async (request: MatrixAddRequest, matrixPath?: string) => {
     if (!enabled) return;
+    setSavingPath(matrixPath);
     setSaving(true);
+    // A selected matrix already shows progress in the picker. Only the
+    // direct-to-default PDF path needs a separate visible progress cue.
+    const loadingToast = request.kind === "pdf" && matrixPath === undefined
+      ? toast.loading("Adding PDF to matrix…")
+      : undefined;
     try {
       const result = request.kind === "literature"
         ? await addLiteratureItemsToMatrix({ projectId, items: request.items, matrixPath })
-        : await addCitationsToMatrix({ projectId, entries: request.entries, matrixPath });
+        : request.kind === "citations"
+          ? await addCitationsToMatrix({ projectId, entries: request.entries, matrixPath })
+          : await addPdfToMatrix({ projectId, pdfPath: request.path, matrixPath });
       if (!result.success) {
-        toast.error("Could not add to the matrix", { description: result.error });
+        toast.error("Could not add to the matrix", { id: loadingToast, description: result.error });
         return;
       }
       const changedFiles: WorkspaceChangedFile[] = [
@@ -90,10 +79,20 @@ export function useMatrixAdd(
         changedFiles.push({ path: PROJECT_BIBLIOGRAPHY_PATH, content: result.bibliographyContent });
       }
       announceWorkspaceChange(changedFiles);
+      rememberMatrixCommit(
+        projectId,
+        request.kind,
+        request.kind === "literature" ? request.items.map((item) => item.id)
+          : request.kind === "citations" ? request.entries.map((entry) => entry.citationKey)
+          : [request.path],
+        result.matrixPath,
+      );
+      setMemberPaths((current) => [...new Set([...(current ?? []), result.matrixPath])]);
       onCommitSuccess?.(request);
       const name = result.matrixPath.split("/").at(-1) || result.matrixPath;
       if (result.addedCount === 0) {
         toast.message("Already in the matrix", {
+          id: loadingToast,
           description: result.matrixPath,
           action: {
             label: "Open",
@@ -104,6 +103,7 @@ export function useMatrixAdd(
         toast.success(
           `Added ${result.addedCount} ${result.addedCount === 1 ? "study" : "studies"}${result.duplicateCount ? ` · ${result.duplicateCount} already present` : ""}`,
           {
+            id: loadingToast,
             description: result.matrixPath,
             action: {
               label: "Open",
@@ -114,14 +114,15 @@ export function useMatrixAdd(
       }
     } catch (error) {
       toast.error("Could not add to the matrix", {
+        id: loadingToast,
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
       setSaving(false);
+      setSavingPath(undefined);
       setPending(undefined);
-      void refresh();
     }
-  }, [onCommitSuccess, projectId, refresh, enabled]);
+  }, [onCommitSuccess, projectId, enabled]);
 
   // Once the target list resolves, a pending request for a single-matrix
   // project commits immediately to the default; several targets keep the
@@ -135,50 +136,20 @@ export function useMatrixAdd(
     }
   }, [commit, pending, targets]);
 
-  // While the picker is open, resolve which matrices already contain the
-  // pending studies so the dialog can mark them (studies may live in several
-  // matrices at once). The loading flag drives a per-row cue in the dialog.
+  // Read known membership immediately. The search's existing saved-state
+  // request seeds this cache; confirmed writes update it before the dialog
+  // closes. Never queue a membership action ahead of the write.
   useEffect(() => {
     if (!pending || !targets || targets.length <= 1) {
       setMemberPaths(undefined);
-      setMemberPathsLoading(false);
       return;
     }
-    let cancelled = false;
-    setMemberPaths(undefined);
-    setMemberPathsLoading(true);
-    void (async () => {
-      try {
-        const locationsByKey: Record<string, string[]> = {};
-        let requestKeys: string[];
-        if (pending.kind === "literature") {
-          const result = await getMatrixSavedState({
-            projectId,
-            items: pending.items.map(({ id, title, authors, year, doi, pmid }) => ({ id, title, authors, year, doi, pmid })),
-          });
-          for (const item of pending.items) locationsByKey[item.id] = result.itemMatrixPaths[item.id] ?? [];
-          requestKeys = pending.items.map((item) => item.id);
-        } else {
-          const result = await getCitationMatrixLocations({
-            projectId,
-            entries: pending.entries.map(({ citationKey, doi }) => ({ citationKey, doi })),
-          });
-          for (const entry of pending.entries) locationsByKey[entry.citationKey] = result.paths[entry.citationKey] ?? [];
-          requestKeys = pending.entries.map((entry) => entry.citationKey);
-        }
-        if (cancelled) return;
-        setMemberPaths(
-          targets
-            .filter((target) => requestKeys.every((key) => locationsByKey[key]?.includes(target.path)))
-            .map((target) => target.path),
-        );
-      } catch {
-        if (!cancelled) setMemberPaths(undefined);
-      } finally {
-        if (!cancelled) setMemberPathsLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    const ids = pending.kind === "literature"
+      ? pending.items.map((item) => item.id)
+      : pending.kind === "citations"
+        ? pending.entries.map((entry) => entry.citationKey)
+        : [pending.path];
+    setMemberPaths(matrixPathsForRequest(projectId, pending.kind, ids));
   }, [pending, projectId, targets]);
 
   const add = useCallback((request: MatrixAddRequest) => {
@@ -196,10 +167,10 @@ export function useMatrixAdd(
   return {
     targets,
     saving,
+    savingPath,
     pending,
     pickerOpen: pending !== undefined && (targets?.length ?? 0) > 1,
     memberPaths,
-    memberPathsLoading,
     add,
     pick,
     cancel,
@@ -207,21 +178,22 @@ export function useMatrixAdd(
 }
 
 export function MatrixTargetDialog({
+  projectId,
   open,
   targets,
   saving,
+  savingPath,
   memberPaths,
-  memberPathsLoading,
   onCancel,
   onPick,
 }: {
+  projectId: string;
   open: boolean;
   targets: MatrixFileSummary[] | undefined;
   saving: boolean;
+  savingPath?: string;
   /** Matrices that already contain every pending study. */
   memberPaths?: string[];
-  /** True while membership is being resolved; rows show a checking cue. */
-  memberPathsLoading?: boolean;
   onCancel: () => void;
   onPick: (matrixPath?: string) => void;
 }) {
@@ -231,11 +203,20 @@ export function MatrixTargetDialog({
   const createAndPick = async () => {
     setCreating(true);
     try {
-      const result = await createMatrixFile({ name });
+      const result = await createMatrixFile({ projectId, name });
       if (!result.success) {
         toast.error("Could not create the matrix", { description: result.error });
         return;
       }
+      dispatchWorkspaceMutation({
+        kind: "create",
+        entry: {
+          path: result.matrixPath,
+          name: result.matrixPath.split("/").at(-1) || result.matrixPath,
+          isDir: false,
+          size: 0,
+        },
+      });
       onPick(result.matrixPath);
     } catch (error) {
       toast.error("Could not create the matrix", {
@@ -275,12 +256,9 @@ export function MatrixTargetDialog({
                 {target.isDefault ? (
                   <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-primary">Default</span>
                 ) : null}
-                {memberPathsLoading ? (
-                  <span
-                    className="flex shrink-0 items-center gap-1 text-[9px] font-semibold uppercase text-muted-foreground"
-                    aria-label="Checking whether this matrix already contains the study"
-                  >
-                    <Loader2 className="size-3 animate-spin" />
+                {saving && savingPath === target.path ? (
+                  <span role="status" className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
+                    <Loader2 className="size-3 animate-spin" />Adding…
                   </span>
                 ) : added ? (
                   <span className="flex shrink-0 items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-emerald-700 dark:text-emerald-400">

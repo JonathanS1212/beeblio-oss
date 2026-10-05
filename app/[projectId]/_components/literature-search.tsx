@@ -48,6 +48,7 @@ import {
 import { getMatrixSavedState } from "../matrix-actions";
 import { ReferenceSheet, literatureSourceLabels as sourceLabels, referenceFromSearchItem } from "./reference-sheet";
 import { MatrixTargetDialog, useMatrixAdd, type MatrixAddRequest } from "./matrix-add";
+import { rememberLiteratureMatrixPaths } from "./matrix-membership-cache";
 
 type LiteratureSort = "relevance" | "year-desc" | "year-asc" | "citations-desc" | "citations-asc" | "title-asc" | "title-desc";
 type SearchDefinition = Pick<LiteratureSearchSnapshot, "query" | "source" | "openAccessOnly">;
@@ -281,6 +282,9 @@ export function LiteratureSearch({
       if (request !== savedStateRequest.current) return;
       const citationIds = new Set(state.citationIds);
       const matrixIds = new Set(matrixState.itemIds);
+      rememberLiteratureMatrixPaths(projectId, Object.fromEntries(
+        items.map((item) => [item.id, matrixState.itemMatrixPaths[item.id] ?? []]),
+      ));
       const pdfPaths = { ...state.pdfPaths };
       // The response may not reflect writes that finished moments ago; merge
       // locally confirmed saves over it rather than letting it replace them.
@@ -715,11 +719,12 @@ export function LiteratureSearch({
         onAddToMatrix={selectedItem ? () => addToMatrix(selectedItem) : undefined}
       />
       <MatrixTargetDialog
+        projectId={projectId}
         open={matrixAdd.pickerOpen}
         targets={matrixAdd.targets}
         saving={matrixAdd.saving}
+        savingPath={matrixAdd.savingPath}
         memberPaths={matrixAdd.memberPaths}
-        memberPathsLoading={matrixAdd.memberPathsLoading}
         onCancel={matrixAdd.cancel}
         onPick={matrixAdd.pick}
       />

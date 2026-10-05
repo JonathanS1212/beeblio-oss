@@ -6,7 +6,8 @@ import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
 import { integerEnv } from "@/lib/env-config";
-import { appendLiteratureItem } from "@/lib/bibliography-store";
+import { appendLiteratureItem, appendManualEntries } from "@/lib/bibliography-store";
+import { parseBibtexEntries, replaceBibtexEntry } from "@/lib/bibtex";
 import { fileStem } from "@/lib/literature/citation-identity";
 import {
   addMatrixPapers,
@@ -31,6 +32,7 @@ import {
   writeAgentWorkspaceFile,
 } from "@/lib/workspace-files";
 import { getOwnedProject } from "./actions";
+import { extractPaperReference } from "./bibliography-actions";
 
 const projectIdSchema = z.string().regex(/^[A-Za-z0-9_-]+$/);
 const matrixPathSchema = z.string().trim().min(3).max(500);
@@ -310,6 +312,89 @@ export async function addCitationsToMatrix(input: unknown): Promise<
   } catch (error) {
     console.error("[matrix-add-citations] failed", error);
     return { success: false, error: error instanceof Error ? error.message : "Could not add to the matrix." };
+  }
+}
+
+/** Add a Library PDF using its linked citation, or identify and save it first. */
+export async function addPdfToMatrix(input: unknown): Promise<
+  | { success: true; matrixPath: string; matrixContent: string; bibliographyContent?: string; addedCount: number; duplicateCount: number }
+  | { success: false; error: string }
+> {
+  const parsed = z.object({
+    projectId: projectIdSchema,
+    pdfPath: z.string().trim().min(1).max(500),
+    matrixPath: matrixPathSchema.optional(),
+  }).safeParse(input);
+  if (!parsed.success) return { success: false, error: "The PDF path is invalid." };
+  const { projectId, pdfPath, matrixPath } = parsed.data;
+  if (pdfPath.split("/").some((segment) => !segment || segment === "." || segment === "..") ||
+    !pdfPath.startsWith(`${REFERENCES_DIRECTORY}/`) || !pdfPath.toLocaleLowerCase().endsWith(".pdf")) {
+    return { success: false, error: "Choose a PDF from the Library." };
+  }
+  const user = await requireOwnedProject(projectId);
+
+  try {
+    const targetPath = resolveTargetMatrixPath(matrixPath);
+    const [source, existingMatrix] = await Promise.all([
+      readAgentWorkspaceTextOrNull(user.id, projectId, PROJECT_BIBLIOGRAPHY_PATH),
+      readMatrixOrNull(user, projectId, targetPath),
+    ]);
+    let bibliographyContent = source ?? "";
+    const linked = parseBibtexEntries(bibliographyContent).find((entry) =>
+      entry.fields.file?.replace(/:[A-Za-z]+$/, "").trim() === pdfPath,
+    );
+    let citationKey = linked?.key;
+
+    if (!citationKey) {
+      const metadata = await extractPaperReference(projectId, pdfPath);
+      if (!metadata.success) return { success: false, error: metadata.error };
+      const result = appendManualEntries(bibliographyContent, [metadata.reference]);
+      bibliographyContent = result.content;
+      citationKey = result.added[0]?.citationKey;
+      if (!citationKey) return { success: false, error: "No reliable citation could be created for this PDF." };
+      // A DOI match can reuse an existing citation that has no Linked File.
+      // Preserve any different attachment already chosen by the user.
+      const citation = parseBibtexEntries(bibliographyContent).find((entry) => entry.key === citationKey);
+      if (citation && !citation.fields.file?.trim()) {
+        bibliographyContent = replaceBibtexEntry(bibliographyContent, citation, {
+          type: citation.type,
+          key: citation.key,
+          fields: { ...citation.fields, file: `${pdfPath}:PDF` },
+        });
+      }
+    }
+
+    const entry = parseBibtexEntries(bibliographyContent).find((candidate) => candidate.key === citationKey);
+    if (!entry?.fields.title?.trim()) {
+      return { success: false, error: "This PDF has no usable title metadata. Add its reference details first." };
+    }
+    const matrixSeed = existingMatrix === null ? createSeedMatrix() : parseMatrixOrThrow(existingMatrix, targetPath);
+    const { matrix, added, duplicates } = addMatrixPapers(matrixSeed, [{
+      citationKey,
+      doi: entry.fields.doi,
+      title: entry.fields.title,
+      authors: entry.fields.author,
+      year: Number(entry.fields.year) || undefined,
+      venue: entry.fields.journal || entry.fields.booktitle,
+    }]);
+    const matrixContent = serializeMatrix(matrix);
+    if (bibliographyContent !== (source ?? "")) {
+      if (source === null) await createAgentWorkspaceDirectory(user.id, projectId, REFERENCES_DIRECTORY);
+      await writeAgentWorkspaceFile(user.id, projectId, PROJECT_BIBLIOGRAPHY_PATH, bibliographyContent);
+    }
+    if (added.length > 0) await writeMatrix(user, projectId, targetPath, matrixContent, existingMatrix !== null);
+    revalidatePath(`/${projectId}`);
+    return {
+      success: true,
+      matrixPath: targetPath,
+      matrixContent,
+      bibliographyContent,
+      addedCount: added.length,
+      duplicateCount: duplicates.length,
+    };
+  } catch (error) {
+    console.error("[matrix-add-pdf] failed", error);
+    return { success: false, error: error instanceof Error ? error.message : "Could not add this PDF to the matrix." };
   }
 }
 

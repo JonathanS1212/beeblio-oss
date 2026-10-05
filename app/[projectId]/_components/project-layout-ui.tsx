@@ -96,6 +96,7 @@ import { KnowledgePanel } from "./knowledge-panel";
 import { FileViewer } from "./file-viewer";
 import { writeCachedText } from "./editors/text-content-cache";
 import { createMatrixFile } from "../matrix-actions";
+import { MatrixTargetsProvider } from "./matrix-targets-context";
 import { ANALYSIS_DIRECTORY } from "@/lib/research-workspace";
 import { clearCachedBibliography, writeCachedBibliography } from "./editors/bibliography-cache";
 import { clearTextDraft, moveTextDraftKey, readTextDraft } from "./editors/text-draft-cache";
@@ -1064,6 +1065,7 @@ export function ProjectLayoutUI({
   };
 
   return (
+    <MatrixTargetsProvider projectId={projectId} initialFiles={initialAllFiles}>
     <WorkspaceContext.Provider value={workspaceContext}>
       <div className="relative flex h-screen w-full overflow-hidden bg-background text-foreground supports-[height:100dvh]:h-dvh">
         <aside
@@ -1742,6 +1744,7 @@ export function ProjectLayoutUI({
       />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </WorkspaceContext.Provider>
+    </MatrixTargetsProvider>
   );
 }
 
