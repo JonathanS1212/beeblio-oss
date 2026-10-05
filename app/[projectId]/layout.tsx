@@ -9,11 +9,13 @@ import {
   resolveDefaultOpenFile,
 } from "@/lib/project-settings";
 import { listAgentSkills } from "@/lib/skills-storage";
-import { getOwnedProject, getProjectSessions } from "./actions";
+import { getOwnedProject } from "./actions";
 import { ProjectLayoutUI } from "./_components/project-layout-ui";
+import { ShareStatusProvider } from "./_components/share-status-context";
 import { UpcomingFeatureDialog } from "./_components/upcoming-feature";
 import { rememberedRailActivity } from "./_components/rail-activity";
-import { getFileContent, getRootTree } from "./file-actions";
+import { getFileContent, getInitialWorkspaceListing } from "./file-actions";
+import { listKnowledge } from "@/lib/knowledge";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -32,7 +34,7 @@ const DEFAULT_FILE_SEED_MAX_BYTES = 512 * 1024;
 async function readDefaultFileSeed(
   projectId: string,
   filePath: string | undefined,
-  rootTree: Awaited<ReturnType<typeof getRootTree>>,
+  rootTree: Awaited<ReturnType<typeof getInitialWorkspaceListing>>["rootTree"],
 ): Promise<string | undefined> {
   if (!filePath) return undefined;
   const entry = [
@@ -58,15 +60,16 @@ export default async function ProjectLayout({
 }) {
   const { projectId } = await params;
   const user = await requireUser();
-  const [initialRootTree, initialSessions, project, initialSkills] =
+  const [workspaceListing, project, initialSkills, initialKnowledgeDocuments] =
     await Promise.all([
-      getRootTree(projectId),
-      getProjectSessions(projectId),
+      getInitialWorkspaceListing(projectId),
       getOwnedProject(user, projectId),
       // Skills seed for the Skills panel; on failure it falls back to the
       // panel's own fetch instead of failing the whole layout.
       listAgentSkills(user.id).catch(() => undefined),
+      listKnowledge(user.id, projectId).catch(() => undefined),
     ]);
+  const initialRootTree = workspaceListing.rootTree;
   if (!project) {
     redirect("/workspace");
   }
@@ -95,14 +98,17 @@ export default async function ProjectLayout({
   return (
     <>
       <UpcomingFeatureDialog />
+      <ShareStatusProvider projectId={projectId}>
       <ProjectLayoutUI
       projectId={projectId}
       projectName={project?.name || projectId}
       initialActivity={initialActivity}
       initialFiles={initialRootTree.entries}
       initialRootTreeChildren={initialRootTree.children}
+      initialAllFiles={workspaceListing.allFiles}
+      initialKnowledgeDocuments={initialKnowledgeDocuments}
       initialSkills={initialSkills}
-      initialSessions={initialSessions}
+      initialSessions={[]}
       defaultFilePath={defaultFilePath}
       defaultFileContent={defaultFileContent}
       userMenu={
@@ -119,6 +125,7 @@ export default async function ProjectLayout({
     >
       {children}
     </ProjectLayoutUI>
+      </ShareStatusProvider>
     </>
   );
 }

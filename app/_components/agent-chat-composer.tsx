@@ -6,10 +6,13 @@ import {
 } from "react";
 import {
   Command,
+  ArrowUp,
   FileIcon,
   Folder,
   Loader2,
   Paperclip,
+  Pencil,
+  Square,
   Quote,
   Wrench,
   X,
@@ -57,6 +60,13 @@ export function AgentChatComposer({
   selectionShortcutLabel,
   submitStatus,
   submitDisabled,
+  canSteer,
+  heldMessage,
+  heldSteerAvailable,
+  heldDisabled,
+  onHeldSubmit,
+  onHeldEdit,
+  onHeldDiscard,
   onSubmit,
   onStop,
   onUpload,
@@ -97,6 +107,13 @@ export function AgentChatComposer({
   readonly selectionShortcutLabel: string;
   readonly submitStatus: ComposerStatus;
   readonly submitDisabled: boolean;
+  readonly canSteer: boolean;
+  readonly heldMessage: { text: string; fileCount: number; skillCount: number; selectionCount: number } | null;
+  readonly heldSteerAvailable: boolean;
+  readonly heldDisabled: boolean;
+  readonly onHeldSubmit: () => void;
+  readonly onHeldEdit: () => void;
+  readonly onHeldDiscard: () => void;
   readonly onSubmit: (message: PromptInputMessage) => void;
   readonly onStop: () => void;
   readonly onUpload: (files: FileList | File[] | null) => void | Promise<void>;
@@ -245,6 +262,21 @@ export function AgentChatComposer({
         className="hidden"
         onChange={(event) => void onUpload(event.currentTarget.files)}
       />
+      {heldMessage ? (
+        <div className="mb-2 flex items-start gap-2 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5">
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 break-words text-xs">{heldMessage.text || "Follow-up with attached context"}</p>
+            {heldMessage.fileCount + heldMessage.skillCount + heldMessage.selectionCount > 0 ? (
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {heldMessage.fileCount} files · {heldMessage.skillCount} skills · {heldMessage.selectionCount} selections
+              </p>
+            ) : null}
+          </div>
+          <button type="button" aria-label="Edit held message" title="Edit" onClick={onHeldEdit} className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"><Pencil className="size-3.5" /></button>
+          <button type="button" aria-label="Discard held message" title="Discard" onClick={onHeldDiscard} className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"><X className="size-3.5" /></button>
+          <button type="button" disabled={heldDisabled} onClick={onHeldSubmit} className="inline-flex items-center gap-1 self-start rounded-md bg-primary px-2.5 py-1.5 text-[11px] font-medium text-primary-foreground disabled:opacity-50"><ArrowUp className="size-3" />{heldSteerAvailable ? "Steer" : "Send"}</button>
+        </div>
+      ) : null}
       <PromptInput
         accept="application/x-beeblio-workspace-upload"
         className="rounded-xl border-border bg-card shadow-sm"
@@ -421,11 +453,14 @@ export function AgentChatComposer({
               </button>
             ) : null}
           </PromptInputTools>
-          <PromptInputSubmit
-            disabled={submitDisabled}
-            onStop={onStop}
-            status={submitStatus}
-          />
+          {canSteer && (draft.trim().length > 0 || mentionedFiles.length > 0 || attachedSelections.length > 0) ? (
+            <>
+              <PromptInputButton aria-label="Stop response" className="absolute right-12 bottom-2.5" onClick={onStop} type="button" variant="outline"><Square className="size-3 fill-current" /></PromptInputButton>
+              <PromptInputSubmit aria-label="Hold follow-up" disabled={submitDisabled} status="ready" />
+            </>
+          ) : (
+            <PromptInputSubmit disabled={submitDisabled} onStop={onStop} status={submitStatus} />
+          )}
         </PromptInputFooter>
       </PromptInput>
     </div>

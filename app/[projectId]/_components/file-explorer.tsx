@@ -560,8 +560,10 @@ export function FileExplorer({
             kind: "move",
             from: sourcePath,
             to: destination,
-            entry: entryByPath.get(sourcePath) ??
-              { name, path: destination, isDir: false, size: 0 },
+            entry: {
+              ...(entryByPath.get(sourcePath) ?? { name, isDir: false, size: 0 }),
+              path: destination,
+            },
           });
         }
       }

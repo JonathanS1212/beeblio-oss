@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, type MouseEvent } from "react";
 import { ChevronUp, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
@@ -21,6 +24,7 @@ export function ChatHistory({
   onQueryChange,
   onSelectConversation,
   onDeleteConversation,
+  onNewConversation,
 }: {
   readonly projectId: string;
   readonly initialSessions: ProjectSession[];
@@ -31,9 +35,20 @@ export function ChatHistory({
   readonly onQueryChange: (query: string) => void;
   readonly onSelectConversation: (sessionId: string) => void;
   readonly onDeleteConversation: (sessionId: string) => void;
+  readonly onNewConversation: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
+  const historyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsideClick = (event: globalThis.PointerEvent) => {
+      if (!historyRef.current?.contains(event.target as Node)) onOpenChange(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [open, onOpenChange]);
   return (
     <Collapsible
+      ref={historyRef}
       open={open}
       onOpenChange={onOpenChange}
       className="shrink-0 bg-sidebar/55"
@@ -51,7 +66,7 @@ export function ChatHistory({
           <Link
             href={newConversationHref}
             aria-label="New conversation"
-            onClick={() => onOpenChange(false)}
+            onClick={onNewConversation}
           >
             <Plus />
           </Link>

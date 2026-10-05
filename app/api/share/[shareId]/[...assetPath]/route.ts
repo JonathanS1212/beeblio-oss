@@ -5,15 +5,18 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { publicFiles, projects } from "@/db/schema";
 import { withFormTheme } from "@/lib/forms/runtime";
+import { parseBibtexEntries } from "@/lib/bibtex";
+import { normalizeEscapedCitations, replaceMarkdownCitations } from "@/lib/markdown-bibliography";
+import { PROJECT_BIBLIOGRAPHY_PATH } from "@/lib/project-bibliography";
 import {
   readAgentWorkspaceFile,
+  getWorkspaceFileFingerprint,
   AgentWorkspaceError,
 } from "@/lib/workspace-files";
 import { resolveWorkspaceAssetPath } from "@/app/[projectId]/_components/editors/markdown-image-path";
 
-// Serves a public share link: the shared file itself plus exactly the assets
-// its markdown references (resolved relative to the document). Holders of a
-// share URL get no other access to the project's workspace.
+// Serves the shared file, its referenced images, and only the bibliography
+// entries cited by a shared Markdown document.
 
 const MARKDOWN_IMAGE_SOURCE = /!\[[^\]]*\]\(\s*<?([^)\s>]+)>?[^)]*\)/g;
 const HTML_IMAGE_SOURCE = /<img[^>]+src=["']([^"']+)["']/gi;
@@ -55,6 +58,21 @@ async function referencedAssetPaths(
     if (resolved) allowed.add(resolved.path);
   }
   return allowed;
+}
+
+async function citedBibliography(ownerUserId: string, projectSlug: string, filePath: string) {
+  const [document, bibliography] = await Promise.all([
+    readAgentWorkspaceFile(ownerUserId, projectSlug, filePath),
+    readAgentWorkspaceFile(ownerUserId, projectSlug, PROJECT_BIBLIOGRAPHY_PATH),
+  ]);
+  const markdown = normalizeEscapedCitations(await document.text());
+  const { citedIds } = replaceMarkdownCitations(markdown, (id) => `[@${id}]`);
+  const cited = new Set(citedIds);
+  const source = await bibliography.text();
+  return parseBibtexEntries(source)
+    .filter((entry) => cited.has(entry.key))
+    .map((entry) => source.slice(entry.start, entry.end))
+    .join("\n\n");
 }
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -119,7 +137,8 @@ async function serveAsset(
   });
   if (!project) return new NextResponse("Not Found", { status: 404 });
 
-  if (rel !== fileRecord.filePath) {
+  const isSharedBibliography = rel === PROJECT_BIBLIOGRAPHY_PATH && /\.(md|markdown|mdx)$/i.test(fileRecord.filePath);
+  if (rel !== fileRecord.filePath && !isSharedBibliography) {
     const allowed = await referencedAssetPaths(project.userId, project.slug, fileRecord.filePath);
     if (!allowed.has(rel)) {
       return new NextResponse("Not Found", { status: 404 });
@@ -130,6 +149,28 @@ async function serveAsset(
   const safeFilename = filename.replace(/["\\\r\n]/g, "_");
 
   try {
+    if (isSharedBibliography) {
+      const content = await citedBibliography(project.userId, project.slug, fileRecord.filePath);
+      return new Response(head ? null : content, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Length": String(Buffer.byteLength(content)),
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+    if (head) {
+      const metadata = await getWorkspaceFileFingerprint(project.userId, project.slug, rel);
+      return new Response(null, {
+        headers: {
+          ETag: metadata.etag,
+          "Content-Length": metadata.size,
+          ...(metadata.updated ? { "Last-Modified": new Date(metadata.updated).toUTCString() } : {}),
+          "Cache-Control": "no-store",
+          "Content-Type": CONTENT_TYPES[path.extname(rel).toLowerCase()] ?? "application/octet-stream",
+        },
+      });
+    }
     // The generated form runtime derives its submit endpoint from this URL.
     // Keep the iframe on /api/share/... instead of redirecting to a file ticket.
     if (rel === fileRecord.filePath && rel.toLowerCase().endsWith(".form.html")) {
@@ -139,19 +180,22 @@ async function serveAsset(
       const themedHtml = /<\/head>/i.test(formHtml)
         ? formHtml.replace(/<\/head>/i, `${FORM_THEME_BRIDGE}</head>`)
         : `${FORM_THEME_BRIDGE}${formHtml}`;
-      return new Response(head ? null : themedHtml, {
-        headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+      return new Response(themedHtml, {
+        headers: { "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": "sandbox allow-scripts allow-forms allow-popups", "Cache-Control": "no-store" },
       });
     }
 
     const download = new URL(request.url).searchParams.get("download") === "file";
-    const response = await readAgentWorkspaceFile(project.userId, project.slug, rel);
+    const response = await readAgentWorkspaceFile(project.userId, project.slug, rel, {
+      range: request.headers.get("range") ?? undefined,
+      ifNoneMatch: request.headers.get("if-none-match") ?? undefined,
+    });
     const headers = new Headers(response.headers);
     headers.set("Content-Type", CONTENT_TYPES[path.extname(rel).toLowerCase()] ?? "application/octet-stream");
     headers.set("Content-Disposition", `${download ? "attachment" : "inline"}; filename*=UTF-8''${encodeURIComponent(safeFilename)}`);
     // Serve on the share URL itself. A ticket redirect can resolve against
     // localhost behind a tunnel, which public browsers cannot reach.
-    return new Response(head ? null : response.body, {
+    return new Response(response.body, {
       status: response.status,
       headers,
     });

@@ -71,6 +71,7 @@ export function AgentMessage({
   isLive,
   isStreaming,
   message,
+  turnDuration,
   onInputResponses,
   reasoningVerbosity,
   toolCallVerbosity,
@@ -82,6 +83,7 @@ export function AgentMessage({
   readonly isLive: boolean;
   readonly isStreaming: boolean;
   readonly message: EveMessage;
+  readonly turnDuration?: number;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
   readonly reasoningVerbosity: ReasoningVerbosity;
   readonly toolCallVerbosity: ToolCallVerbosity;
@@ -90,6 +92,63 @@ export function AgentMessage({
     ? message.parts.length - 1
     : -1;
   const knowledgeCitations = knowledgeCitationsFromParts(message.parts);
+  const activityIsSettled = !isLive && message.role === "assistant";
+  const renderedParts: ReactNode[] = [];
+  let activityParts: { part: EveMessagePart; index: number }[] = [];
+  const flushActivity = () => {
+    if (activityParts.length === 0) return;
+    const parts = activityParts;
+    activityParts = [];
+    const content = parts.map(({ part, index }) => (
+      <AgentMessagePart
+        canRespond={canRespond}
+        isLive={isLive}
+        key={partKey(part, index)}
+        onInputResponses={onInputResponses}
+        part={part}
+        reasoningVerbosity={reasoningVerbosity}
+        showCaret={false}
+        toolCallVerbosity={toolCallVerbosity}
+      />
+    ));
+    renderedParts.push(activityIsSettled ? (
+      <Collapsible className="not-prose group/activity mb-3" key={`activity:${parts[0].index}`}>
+        <CollapsibleTrigger className="flex min-h-7 items-center gap-2 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground">
+          <ChevronDown aria-hidden="true" className="size-3.5 -rotate-90 transition-transform group-data-[state=open]/activity:rotate-0" />
+          <span>{turnDuration
+            ? `${parts.some(({ part }) => part.type === "dynamic-tool") ? "Worked" : "Thought"} for ${formatActivityDuration(turnDuration)}`
+            : parts.some(({ part }) => part.type === "dynamic-tool") ? "Work details" : "Thought details"}</span>
+          <span className="text-muted-foreground/70">· {parts.length} {parts.length === 1 ? "step" : "steps"}</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="ml-1 border-l border-border/70 pl-4 pt-2">
+          {content}
+        </CollapsibleContent>
+      </Collapsible>
+    ) : (
+      <div key={`activity:${parts[0].index}`}>{content}</div>
+    ));
+  };
+  message.parts.forEach((part, index) => {
+    if (isActivityPart(part)) {
+      activityParts.push({ part, index });
+      return;
+    }
+    if (part.type === "step-start") return;
+    flushActivity();
+    renderedParts.push(
+      <AgentMessagePart
+        canRespond={canRespond}
+        isLive={isLive}
+        key={partKey(part, index)}
+        onInputResponses={onInputResponses}
+        part={part}
+        reasoningVerbosity={reasoningVerbosity}
+        showCaret={isStreaming && message.role === "assistant" && index === activeTextIndex}
+        toolCallVerbosity={toolCallVerbosity}
+      />,
+    );
+  });
+  flushActivity();
 
   if (isCompactionCheckpointMessage(message)) {
     return <CompactionCheckpointDivider />;
@@ -101,24 +160,27 @@ export function AgentMessage({
       from={message.role}
     >
       <MessageContent>
-        {message.parts.map((part, index) => (
-          <AgentMessagePart
-            canRespond={canRespond}
-            isLive={isLive}
-            key={partKey(part, index)}
-            onInputResponses={onInputResponses}
-            part={part}
-            reasoningVerbosity={reasoningVerbosity}
-            showCaret={isStreaming && message.role === "assistant" && index === activeTextIndex}
-            toolCallVerbosity={toolCallVerbosity}
-          />
-        ))}
+        {renderedParts}
         {message.role === "assistant" && knowledgeCitations.length > 0 ? (
           <KnowledgeCitations citations={knowledgeCitations} />
         ) : null}
       </MessageContent>
     </Message>
   );
+}
+
+function isActivityPart(part: EveMessagePart): boolean {
+  if (part.type === "reasoning") return true;
+  if (part.type !== "dynamic-tool") return false;
+  // Requests that need a person must remain visible outside the disclosure.
+  return !part.toolMetadata?.eve?.inputRequest;
+}
+
+function formatActivityDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return remainder ? `${minutes}m ${remainder}s` : `${minutes}m`;
 }
 
 type KnowledgeCitation = {
@@ -264,6 +326,7 @@ function AgentMessagePart({
           caret="block"
           className="agent-chat-markdown"
           isAnimating={showCaret}
+          mode={showCaret ? "streaming" : "static"}
         >
           {part.text}
         </AgentMessageResponse>

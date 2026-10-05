@@ -43,6 +43,7 @@ export function useMatrixAdd(
   /** Notified with the committed request so callers can update local state
    * without waiting for the post-save badge sync. */
   onCommitSuccess?: (request: MatrixAddRequest) => void,
+  enabled = true,
 ) {
   const [targets, setTargets] = useState<MatrixFileSummary[]>();
   const [saving, setSaving] = useState(false);
@@ -52,14 +53,16 @@ export function useMatrixAdd(
   const initialRefreshProjectRef = useRef<string | undefined>(undefined);
 
   const refresh = useCallback(async () => {
+    if (!enabled) return;
     try {
       setTargets(await listMatrixFiles(projectId));
     } catch {
       setTargets([]);
     }
-  }, [projectId]);
+  }, [projectId, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (initialRefreshProjectRef.current !== projectId) {
       initialRefreshProjectRef.current = projectId;
       void refresh();
@@ -70,6 +73,7 @@ export function useMatrixAdd(
   }, [projectId, refresh]);
 
   const commit = useCallback(async (request: MatrixAddRequest, matrixPath?: string) => {
+    if (!enabled) return;
     setSaving(true);
     try {
       const result = request.kind === "literature"
@@ -117,7 +121,7 @@ export function useMatrixAdd(
       setPending(undefined);
       void refresh();
     }
-  }, [onCommitSuccess, projectId, refresh]);
+  }, [onCommitSuccess, projectId, refresh, enabled]);
 
   // Once the target list resolves, a pending request for a single-matrix
   // project commits immediately to the default; several targets keep the
@@ -178,8 +182,9 @@ export function useMatrixAdd(
   }, [pending, projectId, targets]);
 
   const add = useCallback((request: MatrixAddRequest) => {
+    if (!enabled) return;
     setPending(request);
-  }, []);
+  }, [enabled]);
 
   const pick = useCallback((matrixPath?: string) => {
     if (!pending) return;

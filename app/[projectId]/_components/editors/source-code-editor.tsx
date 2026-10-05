@@ -59,7 +59,7 @@ const modes: Record<string, StreamParser<unknown>> = {
   yml: yaml,
 };
 
-export function SourceCodeEditor({ value, extension, onChange }: { value: string; extension: string; onChange: (value: string) => void }) {
+export function SourceCodeEditor({ value, extension, onChange, readOnly = false }: { value: string; extension: string; onChange: (value: string) => void; readOnly?: boolean }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -73,6 +73,7 @@ export function SourceCodeEditor({ value, extension, onChange }: { value: string
       state: EditorState.create({
         doc: value,
         extensions: [
+          EditorView.editable.of(!readOnly),
           lineNumbers(), highlightActiveLineGutter(), highlightSpecialChars(), history(),
           drawSelection(), dropCursor(), EditorState.allowMultipleSelections.of(true),
           indentOnInput(), bracketMatching(), closeBrackets(), rectangularSelection(),
@@ -102,7 +103,7 @@ export function SourceCodeEditor({ value, extension, onChange }: { value: string
     };
   // The CodeMirror instance is stable; the following effect syncs value updates.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extension]);
+  }, [extension, readOnly]);
 
   useEffect(() => {
     const view = viewRef.current;

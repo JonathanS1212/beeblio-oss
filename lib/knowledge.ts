@@ -84,6 +84,7 @@ export async function listKnowledge(userId: string, projectSlug: string): Promis
     where: eq(knowledgeDocuments.projectId, project.id),
     orderBy: (table, { asc }) => [asc(table.displayName)],
   });
+  if (rows.length === 0) return [];
   const citationKeys = await bibliographyKeysByFilePath(userId, projectSlug);
   return rows.map((row) => ({
     id: row.id,

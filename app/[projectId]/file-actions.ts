@@ -30,6 +30,7 @@ import {
   getAgentWorkspaceRootTree,
   listAgentWorkspaceFiles,
   listAgentWorkspaceFilesRecursive,
+  listWorkspaceFilesRecursive,
   moveAgentWorkspacePath,
   readAgentWorkspaceFile,
   writeAgentWorkspaceFile,
@@ -170,6 +171,29 @@ export async function getRootTree(projectId: string): Promise<RootTree> {
   } catch (error) {
     console.error("[getRootTree] agent workspace failed", error);
     return { entries: [], children: {} };
+  }
+}
+
+/** Reuse one bounded local directory walk for the explorer and rail panels. */
+export async function getInitialWorkspaceListing(projectId: string): Promise<{ rootTree: RootTree; allFiles?: FileEntry[] }> {
+  const user = await requireUser();
+  const maxEntries = integerEnv("WORKSPACE_LIST_MAX_ENTRIES", 2_000, 1);
+  try {
+    const listing = await listWorkspaceFilesRecursive(user.id, projectId, maxEntries);
+    if (listing.truncated) return { rootTree: await getRootTree(projectId) };
+    const allFiles = listing.entries.filter(isVisibleWorkspaceEntry);
+    const entries: FileEntry[] = [];
+    const children: Record<string, FileEntry[]> = {};
+    for (const entry of allFiles) {
+      const separator = entry.path.lastIndexOf("/");
+      const parent = separator < 0 ? "" : entry.path.slice(0, separator);
+      if (!parent) entries.push(entry);
+      else if (!parent.includes("/")) (children[parent] ??= []).push(entry);
+    }
+    return { rootTree: { entries, children }, allFiles };
+  } catch (error) {
+    console.error("[getInitialWorkspaceListing] local workspace failed", error);
+    return { rootTree: await getRootTree(projectId) };
   }
 }
 

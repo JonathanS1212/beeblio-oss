@@ -16,7 +16,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import {
   ADD_SELECTION_TO_CHAT_EVENT,
   ASK_AGENT_EVENT,
   OPEN_WORKSPACE_FILE_EVENT,
+  NEW_CONVERSATION_EVENT,
   SKILLS_CHANGED_EVENT,
   openWorkspaceEntry,
   serializeChatMessage,
@@ -64,6 +65,14 @@ const CANCEL_SETTLE_TIMEOUT_MS = 10_000;
 
 type AgentStatus = ReturnType<typeof useEveAgent>["status"];
 type CancellationState = "idle" | "requested" | "cancelling";
+type HeldChatMessage = {
+  serialized: string;
+  preview: string;
+  mentions: ChatFileContext[];
+  skills: string[];
+  selections: ChatSelectionContext[];
+  inlineSnapshot: { path: string; content: string } | null;
+};
 
 export function AgentChat({
   projectId,
@@ -104,20 +113,44 @@ export function AgentChat({
   // with the same key, so React reconciles instead of remounting — reset here
   // so the user gets a fresh chat instead of the just-persisted one.
   const pathname = usePathname();
+  const router = useRouter();
   const [resetCount, setResetCount] = useState(0);
+  const [startedFreshConversation, setStartedFreshConversation] = useState(false);
   const prevPathnameRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const startFreshConversation = () => {
+      setStartedFreshConversation(true);
+      setHistoryEvents([]);
+      setResetCount((count) => count + 1);
+    };
+    window.addEventListener(NEW_CONVERSATION_EVENT, startFreshConversation);
+    return () => window.removeEventListener(NEW_CONVERSATION_EVENT, startFreshConversation);
+  }, []);
+
+  useEffect(() => {
+    if (!startedFreshConversation) return;
+    const restoreRouteOnBack = () => {
+      setStartedFreshConversation(false);
+      setHistoryEvents(initialEvents ?? []);
+      setResetCount((count) => count + 1);
+      router.refresh();
+    };
+    window.addEventListener("popstate", restoreRouteOnBack);
+    return () => window.removeEventListener("popstate", restoreRouteOnBack);
+  }, [startedFreshConversation, initialEvents, router]);
 
   useEffect(() => {
     const prev = prevPathnameRef.current;
     prevPathnameRef.current = pathname;
-    if (prev === undefined || prev === pathname || sessionId !== undefined || !projectId) {
+    if (prev === undefined || prev === pathname || sessionId !== undefined || startedFreshConversation || !projectId) {
       return;
     }
     if (prev.startsWith(`/${projectId}/`) && pathname === `/${projectId}`) {
       setHistoryEvents([]);
       setResetCount((count) => count + 1);
     }
-  }, [pathname, projectId, sessionId]);
+  }, [pathname, projectId, sessionId, startedFreshConversation]);
 
   // Drop the consumed cache entry once it has been seeded into state; the
   // running chat below keeps its own entries current (see handleEvent).
@@ -131,9 +164,9 @@ export function AgentChat({
     <AgentChatInner
       historyEvents={historyEvents}
       key={resetCount}
-      initialState={initialState}
+      initialState={startedFreshConversation ? undefined : initialState}
       projectId={projectId}
-      sessionId={sessionId}
+      sessionId={startedFreshConversation ? undefined : sessionId}
       toolCallVerbosity={toolCallVerbosity}
       reasoningVerbosity={reasoningVerbosity}
       suggestedPrompts={suggestedPrompts}
@@ -165,11 +198,11 @@ function AgentChatInner({
   const eventLogRef = useRef<MessageStreamEvent[]>([...historyEvents]);
   const pendingInlineSnapshotRef = useRef<{ path: string; content: string } | null>(null);
   const pendingEditorWritesRef = useRef(new Map<string, string>());
+  const changedWorkspaceTurnsRef = useRef(new Set<string>());
   // Set once this instance persists its session in place (new chat → named
   // URL without a navigation). Later turns PUT state against this id because
   // the sessionId prop stays undefined for the lifetime of this instance.
   const persistedSessionIdRef = useRef<string | undefined>(undefined);
-  const announcedSessionIdRef = useRef<string | undefined>(sessionId);
   // The app row is created before dispatch, then linked to the Eve session as
   // soon as Eve accepts the turn. Avoid repeating that initial cursor write on
   // every streamed event.
@@ -191,10 +224,6 @@ function AgentChatInner({
       if (!force && persistedEveSessionIdRef.current === cursor.sessionId) return;
 
       persistedEveSessionIdRef.current = cursor.sessionId;
-      if (announcedSessionIdRef.current !== appSessionId) {
-        announcedSessionIdRef.current = appSessionId;
-        window.dispatchEvent(new CustomEvent("beeblio:session-created"));
-      }
       let payload = JSON.stringify({
         sessionId: appSessionId,
         state: cursor,
@@ -222,6 +251,8 @@ function AgentChatInner({
       }).then((res) => {
         if (!res.ok) {
           console.warn("Session persistence responded with status:", res.status);
+        } else {
+          window.dispatchEvent(new CustomEvent("beeblio:session-created"));
         }
       }).catch((error) => {
         // Allow a later cursor advance to retry an interrupted initial link.
@@ -270,6 +301,9 @@ function AgentChatInner({
         setIsCompacting(true);
       } else if (event.type === "actions.requested") {
         for (const action of event.data.actions) {
+          if (action.kind === "tool-call" && OPAQUE_WORKSPACE_TOOLS.has(action.toolName)) {
+            changedWorkspaceTurnsRef.current.add(event.data.turnId);
+          }
           if (action.kind !== "tool-call" || !WORKSPACE_MUTATING_TOOLS.has(action.toolName)) continue;
           const path = workspaceRelativeToolPath({ path: action.input.filePath });
           if (!path) continue;
@@ -330,9 +364,11 @@ function AgentChatInner({
         !event.data.result.isError &&
         WORKSPACE_MUTATING_TOOLS.has(event.data.result.toolName)
       ) {
+        const changed = workspaceToolChanged(event.data.result.toolName, event.data.result.output);
+        if (changed) changedWorkspaceTurnsRef.current.add(event.data.turnId);
         const snapshot = pendingInlineSnapshotRef.current;
         const writtenPath = workspaceRelativeToolPath(event.data.result.output);
-        if (writtenPath) {
+        if (changed && writtenPath) {
           const matchingSnapshot = snapshot?.path === writtenPath ? snapshot : undefined;
           if (matchingSnapshot) pendingInlineSnapshotRef.current = null;
           window.dispatchEvent(new CustomEvent("beeblio:reload-workspace-file", {
@@ -347,6 +383,14 @@ function AgentChatInner({
         setStreamError(event.data.message || "The agent could not complete this request.");
       }
       if (event.type === "turn.completed" || event.type === "turn.failed" || event.type === "turn.cancelled" || event.type === "session.failed") {
+        if (event.type === "session.failed") {
+          if (changedWorkspaceTurnsRef.current.size > 0) {
+            window.dispatchEvent(new CustomEvent("beeblio:workspace-changed"));
+            changedWorkspaceTurnsRef.current.clear();
+          }
+        } else if (changedWorkspaceTurnsRef.current.delete(event.data.turnId)) {
+          window.dispatchEvent(new CustomEvent("beeblio:workspace-changed"));
+        }
         for (const [callId, path] of pendingEditorWritesRef.current) {
           window.dispatchEvent(new CustomEvent("beeblio:agent-file-edit", {
             detail: { projectId, path, callId, editing: false },
@@ -390,18 +434,33 @@ function AgentChatInner({
     onSessionChange: (cursor) => persistCurrentSessionState(cursor),
   });
 
-  // When an agent turn finishes (leaves the busy states), notify the Workspace
-  // Files panel to re-list, since the agent may have created/renamed/deleted
-  // files. See app/[projectId]/_components/file-explorer.tsx.
   const prevStatusRef = useRef<AgentStatus>(agent.status);
+  const heldAutoSendArmedRef = useRef(false);
   useEffect(() => {
-    const prev = prevStatusRef.current;
+    const previous = prevStatusRef.current;
     prevStatusRef.current = agent.status;
-    const wasBusy = prev === "submitted" || prev === "streaming";
+    const wasBusy = previous === "submitted" || previous === "streaming";
     const isBusyNow = agent.status === "submitted" || agent.status === "streaming";
-    if (wasBusy && !isBusyNow) {
-      window.dispatchEvent(new CustomEvent("beeblio:workspace-changed"));
+    if (isBusyNow) return;
+    if (agent.status === "resuming") {
+      if (heldMessageRef.current) heldAutoSendArmedRef.current = true;
+      return;
     }
+    const held = heldMessageRef.current;
+    if (!held) return;
+    const armed = wasBusy || heldAutoSendArmedRef.current;
+    heldAutoSendArmedRef.current = false;
+    if (!armed) return;
+    if (agent.status === "error") {
+      setHeldMessage(null);
+      setDraft(held.preview);
+      setMentionedFiles(held.mentions);
+      setMentionedSkills(held.skills);
+      setAttachedSelections(held.selections);
+      return;
+    }
+    setHeldMessage(null);
+    void dispatchRef.current({ serialized: held.serialized, steer: false, inlineSnapshot: held.inlineSnapshot, restore: held, restageOnFailure: true }).catch(() => undefined);
   }, [agent.status]);
 
   // A cancellation is fulfilled once the stream delivers the turn's terminal
@@ -440,7 +499,6 @@ function AgentChatInner({
           );
         }
         persistCurrentSessionState(agent.session, true);
-        window.dispatchEvent(new CustomEvent("beeblio:session-created"));
       }
     }
   }, [agent.status, agent.session, sessionId, projectId, persistCurrentSessionState]);
@@ -496,11 +554,14 @@ function AgentChatInner({
   const [mentionedFiles, setMentionedFiles] = useState<ChatFileContext[]>([]);
   const [mentionedSkills, setMentionedSkills] = useState<string[]>([]);
   const [attachedSelections, setAttachedSelections] = useState<ChatSelectionContext[]>([]);
+  const [heldMessage, setHeldMessage] = useState<HeldChatMessage | null>(null);
+  const heldMessageRef = useRef<HeldChatMessage | null>(null);
+  heldMessageRef.current = heldMessage;
   const [selectionShortcutLabel, setSelectionShortcutLabel] = useState("Ctrl+L");
   // Bumped on every accepted send so the message list scrolls the new user
   // message into view even when the user had scrolled up (see AgentMessageList).
   const [sendScrollSignal, setSendScrollSignal] = useState(0);
-  const [workspaceFiles, setWorkspaceFiles] = useState<FileEntry[]>([]);
+  const [workspaceFiles, setWorkspaceFiles] = useState<FileEntry[]>(() => workspace.initialFiles ?? []);
   const [availableSkills, setAvailableSkills] = useState<SkillSummary[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string>();
   const [skillQuery, setSkillQuery] = useState<string>();
@@ -584,10 +645,11 @@ function AgentChatInner({
   }, [projectId]);
 
   useEffect(() => {
-    refreshWorkspaceFiles();
+    if (workspace.initialFiles) rememberWorkspaceEntries(workspace.initialFiles);
+    else refreshWorkspaceFiles();
     window.addEventListener("beeblio:workspace-changed", refreshWorkspaceFiles);
     return () => window.removeEventListener("beeblio:workspace-changed", refreshWorkspaceFiles);
-  }, [refreshWorkspaceFiles]);
+  }, [refreshWorkspaceFiles, workspace.initialFiles]);
 
   // User-defined skills are user-scoped (available in every project) and only
   // change through the Skills panel, which announces itself via the event.
@@ -869,7 +931,7 @@ function AgentChatInner({
         ? [activeFileContext]
         : []),
     ];
-    if ((text.length === 0 && files.length === 0 && submittedSelections.length === 0) || isBusy || isResuming || isUploading) return;
+    if ((text.length === 0 && files.length === 0 && submittedSelections.length === 0) || isResuming || isUploading || cancellationState !== "idle") return;
 
     const submittedMentions = activeMentions;
     const submittedSkills = mentionedSkills;
@@ -879,49 +941,87 @@ function AgentChatInner({
       selections: submittedSelections,
       interaction: overrides?.interaction,
     });
-    pendingInlineSnapshotRef.current = null;
-    if (currentEditorContent !== null && overrides?.interaction?.targetFilePath) {
-      pendingInlineSnapshotRef.current = {
-        path: overrides.interaction.targetFilePath,
-        content: currentEditorContent,
-      };
+    const inlineSnapshot = currentEditorContent !== null && overrides?.interaction?.targetFilePath
+      ? { path: overrides.interaction.targetFilePath, content: currentEditorContent }
+      : null;
+    const restore = { preview: text, mentions: submittedMentions, skills: submittedSkills, selections: submittedSelections };
+    if (isBusy) {
+      setHeldMessage({ serialized: serializedMessage, ...restore, inlineSnapshot });
+      clearComposerState();
+      return;
     }
+    await dispatchSerializedMessage({ serialized: serializedMessage, steer: false, inlineSnapshot, restore, restageOnFailure: false });
+  };
 
-    // The proxy creates this app-level row as part of Eve's existing request,
-    // before it forwards any work to the agent runtime.
-    const appSessionId = prepareConversation();
-
-    prepareTurn();
-    setSendScrollSignal((signal) => signal + 1);
-
-    // Clear turn-specific composer state as soon as Eve accepts the send call.
-    // `agent.send()` resolves after the turn, which would otherwise leave stale
-    // mention and selection chips visible while the response is streaming.
+  const clearComposerState = () => {
     setDraft("");
     setMentionedFiles([]);
     setMentionedSkills([]);
     setAttachedSelections([]);
     workspace.clearSelection();
-    const requestId = crypto.randomUUID();
+  };
 
+  const dispatchSerializedMessage = async (input: {
+    serialized: string;
+    steer: boolean;
+    inlineSnapshot: HeldChatMessage["inlineSnapshot"];
+    restore: Omit<HeldChatMessage, "serialized" | "inlineSnapshot">;
+    restageOnFailure: boolean;
+  }) => {
+    const appSessionId = prepareConversation();
+    prepareTurn();
+    setSendScrollSignal((signal) => signal + 1);
+    clearComposerState();
+    pendingInlineSnapshotRef.current = input.inlineSnapshot;
+    const steerNow = input.steer && (agent.status === "submitted" || agent.status === "streaming");
     try {
-      await agent.send(serializedMessage, {
+      await agent.send(input.serialized, {
+        ...(steerNow ? { turnPolicy: "steer" as const } : {}),
         headers: {
-          "x-beeblio-request-id": requestId,
-                    ...(sessionId ? {} : { "x-beeblio-app-session-id": appSessionId ?? "" }),
+          "x-beeblio-request-id": crypto.randomUUID(),
+          ...(sessionId ? {} : { "x-beeblio-app-session-id": appSessionId ?? "" }),
         },
         signal: turnAbortRef.current?.signal,
       });
     } catch (error) {
       pendingInlineSnapshotRef.current = null;
-      // Preserve the user's composed context when submission itself fails so it
-      // can be retried without rebuilding every mention.
-      setDraft(text);
-      setMentionedFiles(submittedMentions);
-      setMentionedSkills(submittedSkills);
-      setAttachedSelections(submittedSelections);
+      if (input.restageOnFailure) {
+        setHeldMessage({ serialized: input.serialized, ...input.restore, inlineSnapshot: input.inlineSnapshot });
+      } else {
+        setDraft(input.restore.preview);
+        setMentionedFiles(input.restore.mentions);
+        setMentionedSkills(input.restore.skills);
+        setAttachedSelections(input.restore.selections);
+      }
       throw error;
     }
+  };
+
+  const dispatchRef = useRef(dispatchSerializedMessage);
+  dispatchRef.current = dispatchSerializedMessage;
+
+  const submitHeldMessage = () => {
+    const held = heldMessageRef.current;
+    if (!held || isResuming || isUploading || cancellationState !== "idle") return;
+    setHeldMessage(null);
+    void dispatchRef.current({
+      serialized: held.serialized,
+      steer: isBusy,
+      inlineSnapshot: held.inlineSnapshot,
+      restore: held,
+      restageOnFailure: true,
+    }).catch(() => undefined);
+  };
+
+  const editHeldMessage = () => {
+    const held = heldMessageRef.current;
+    if (!held) return;
+    setHeldMessage(null);
+    setDraft(held.preview);
+    setMentionedFiles(held.mentions);
+    setMentionedSkills(held.skills);
+    setAttachedSelections(held.selections);
+    draftInputRef.current?.focus();
   };
 
   // Shared send path: the unsaved-file gate plus context overrides for callers
@@ -1052,6 +1152,7 @@ function AgentChatInner({
           messages={agent.data.messages}
           status={agent.status}
           lastEvent={lastStreamEvent}
+          events={agent.events}
           textStreamStalled={textStreamStalled}
           isCompacting={isCompacting}
           isInitialTurn={
@@ -1098,6 +1199,13 @@ function AgentChatInner({
           selectionShortcutLabel={selectionShortcutLabel}
           submitStatus={submitStatus}
           submitDisabled={isUploading || isResuming}
+          canSteer={isBusy && cancellationState === "idle"}
+          heldMessage={heldMessage ? { text: heldMessage.preview, fileCount: heldMessage.mentions.length, skillCount: heldMessage.skills.length, selectionCount: heldMessage.selections.length } : null}
+          heldSteerAvailable={isBusy}
+          heldDisabled={cancellationState !== "idle" || isResuming || isUploading}
+          onHeldSubmit={submitHeldMessage}
+          onHeldEdit={editHeldMessage}
+          onHeldDiscard={() => setHeldMessage(null)}
           onSubmit={handleSubmit}
           onStop={requestCancellation}
           onUpload={handleUpload}
@@ -1147,21 +1255,33 @@ function workspaceRelativeToolPath(output: unknown): string | undefined {
   return path.replace(/^\/workspace\//, "").replace(/^\//, "");
 }
 
-// Tools that create or replace workspace content and report the affected path
-// in their result. Path-specific reloads make mounted editors update as soon as
-// the write completes; the turn-boundary workspace scan remains the fallback
-// for opaque mutations performed through bash.
+// These tools can change workspace contents. Path reloads update open editors;
+// a single turn-end refresh reconciles file lists after actual mutations.
 const WORKSPACE_MUTATING_TOOLS = new Set([
   "write_file",
   "edit_document",
+  "create_directory",
   "update_matrix",
   "update_bibliography",
+  "update_excalidraw",
   "create_form",
   "convert_markdown_document",
   "copy_path",
   "fetch_demographic_data",
   "transcribe_audio",
+  "fetch_openalex_works",
+  "extract_audio",
 ]);
+
+const OPAQUE_WORKSPACE_TOOLS = new Set(["fetch_openalex_works", "extract_audio"]);
+
+function workspaceToolChanged(toolName: string, output: unknown): boolean {
+  if (!output || typeof output !== "object") return true;
+  if (toolName === "transcribe_audio") return "outputPath" in output;
+  if (toolName === "create_directory" && "created" in output) return output.created !== false;
+  if ((toolName === "edit_document" || toolName === "update_bibliography") && "changed" in output) return output.changed !== false;
+  return true;
+}
 
 function latestStreamError(
   events: readonly MessageStreamEvent[],

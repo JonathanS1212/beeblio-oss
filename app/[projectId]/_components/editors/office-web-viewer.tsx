@@ -31,17 +31,13 @@ export function OfficeWebViewer({ projectId, file, sourceUrl }: WorkspaceEditorP
 
     void (async () => {
       try {
-        if (shareId) {
-          if (window.location.protocol !== "https:") {
-            throw new Error("Office preview requires a public HTTPS share URL");
-          }
-          if (!cancelled) setSrc(new URL(sourceUrl, window.location.href).href);
-          return;
+        if (shareId && window.location.protocol !== "https:") {
+          throw new Error("Office preview requires a public HTTPS share URL");
         }
-        const response = await fetch(
-          `/api/office/${encodeURIComponent(projectId)}/view?path=${encodeURIComponent(file.path)}`,
-          { signal: controller.signal, cache: "no-store" },
-        );
+        const previewUrl = shareId
+          ? `/api/office/share/${encodeURIComponent(shareId)}/view`
+          : `/api/office/${encodeURIComponent(projectId)}/view?path=${encodeURIComponent(file.path)}`;
+        const response = await fetch(previewUrl, { signal: controller.signal, cache: "no-store" });
         const result = await response.json() as { src?: string; error?: string };
         if (!response.ok || !result.src) {
           throw new Error(result.error || "Unable to open Office preview");

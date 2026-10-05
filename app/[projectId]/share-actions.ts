@@ -5,28 +5,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { publicFiles, projects } from "@/db/schema";
 import { requireUser } from "@/lib/auth/session";
-import { publicTunnelOrigin } from "@/lib/public-tunnel-origin";
 import { getOwnedProject } from "./actions";
-
-export async function getSharePublicOrigin() {
-  await requireUser();
-  return publicTunnelOrigin();
-}
-
-export async function getPublicFileStatus(projectSlug: string, filePath: string) {
-  const user = await requireUser();
-  const proj = await getOwnedProject(user, projectSlug);
-  if (!proj) return null;
-
-  const file = await db.query.publicFiles.findFirst({
-    where: and(
-      eq(publicFiles.projectId, proj.id),
-      eq(publicFiles.filePath, filePath)
-    ),
-  });
-
-  return file?.id ?? null;
-}
 
 export async function setFilePublic(projectSlug: string, filePath: string, isPublic: boolean) {
   const user = await requireUser();
@@ -34,15 +13,17 @@ export async function setFilePublic(projectSlug: string, filePath: string, isPub
   if (!proj) throw new Error("Unauthorized");
 
   if (isPublic) {
-    const existing = await getPublicFileStatus(projectSlug, filePath);
-    if (existing) return existing;
-
     const [inserted] = await db.insert(publicFiles).values({
       projectId: proj.id,
       filePath: filePath,
-    }).returning({ id: publicFiles.id });
-    
-    return inserted.id;
+    }).onConflictDoNothing().returning({ id: publicFiles.id });
+    if (inserted) return inserted.id;
+    const existing = await db.query.publicFiles.findFirst({
+      where: and(eq(publicFiles.projectId, proj.id), eq(publicFiles.filePath, filePath)),
+      columns: { id: true },
+    });
+    if (!existing) throw new Error("Unable to find shared file");
+    return existing.id;
   } else {
     await db.delete(publicFiles).where(
       and(

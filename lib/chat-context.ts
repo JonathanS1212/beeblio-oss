@@ -88,6 +88,7 @@ export const SKILLS_CHANGED_EVENT = "beeblio:skills-changed";
 // listens for this to pre-warm the user's sandbox on real intent rather than
 // on page mount.
 export const AGENT_PANEL_OPENED_EVENT = "beeblio:agent-panel-opened";
+export const NEW_CONVERSATION_EVENT = "beeblio:new-conversation";
 
 export type OpenWorkspaceFileDetail = {
   name: string;

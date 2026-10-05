@@ -26,6 +26,7 @@ export default async function ProjectSessionPage({
   const settings = parseProjectSettings(project?.settings);
   const session = sessionId && project
     ? await db.query.agentSessions.findFirst({
+        columns: { id: true, state: true, events: true },
         where: and(
           eq(agentSessions.id, sessionId),
           eq(agentSessions.projectId, project.id),

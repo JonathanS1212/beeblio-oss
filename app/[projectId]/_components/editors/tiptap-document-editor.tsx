@@ -203,12 +203,11 @@ export function MarkdownTiptapEditor({
   const bibliographySourceRef = useRef<string | null>(initialBibliography?.source ?? null);
   const loadReferences = useCallback(() => {
     const request = ++referencesRequestId.current;
-    const encodedPath = PROJECT_BIBLIOGRAPHY_PATH.split("/").map(encodeURIComponent).join("/");
+    // The share endpoint returns only entries cited by this document.
     const sourcePromise = publicView.shareId
-      ? fetch(`/api/workspace/${encodeURIComponent(projectId)}/${encodedPath}`, { cache: "no-store" })
+      ? fetch(`/api/share/${encodeURIComponent(publicView.shareId)}/${PROJECT_BIBLIOGRAPHY_PATH}`, { cache: "no-store" })
           .then((response) => {
-            if (response.status === 404) return "";
-            if (!response.ok) throw new Error("Unable to load bibliography");
+            if (!response.ok) throw new Error("Unable to load shared bibliography");
             return response.text();
           })
       : getFileContent(projectId, PROJECT_BIBLIOGRAPHY_PATH).then((source) => {

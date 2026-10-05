@@ -42,6 +42,7 @@ export type WorkspaceUnsavedFile = {
 };
 
 export type WorkspaceContextValue = {
+  initialFiles?: FileEntry[];
   activeFile?: FileEntry;
   selection?: WorkspaceSelection;
   unsavedFile?: WorkspaceUnsavedFile;

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   BookMarked, ChevronRight, Copy, Download, Edit2, Folder, FolderInput, Loader2,
-  MoreVertical, Paperclip, Trash2,
+  MoreVertical, Paperclip, Share2, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,6 +39,7 @@ import { FileNameInput, splitFileName } from "./file-name-input";
 import { fileUrl } from "./file-viewer";
 import { addFileToKnowledge } from "../knowledge-actions";
 import { acceptsKnowledgeFile } from "@/lib/knowledge-files";
+import { ShareFileControls } from "./editors/share-button";
 
 export function WorkspaceFileActions({
   projectId,
@@ -53,6 +54,7 @@ export function WorkspaceFileActions({
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameError, setRenameError] = useState<string>();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveError, setMoveError] = useState<string>();
   // The rename field edits the stem only; the extension stays fixed so the
@@ -287,12 +289,23 @@ export function WorkspaceFileActions({
           }}><Edit2 />Rename</DropdownMenuItem>
           {!file.isDir ? <DropdownMenuItem onClick={() => void duplicate()}><Copy />Duplicate</DropdownMenuItem> : null}
           <DropdownMenuItem onClick={() => void download()}><Download />Download</DropdownMenuItem>
+          {!file.isDir ? <DropdownMenuItem onSelect={() => setShareOpen(true)}><Share2 />Share</DropdownMenuItem> : null}
           <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => {
             if (affectsProtectedWorkspacePath(file.path)) return toast.error("This workspace item is protected");
             setDeleteOpen(true);
           }}><Trash2 />Delete</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share {file.name}</DialogTitle>
+            <DialogDescription>Anyone with the public link can view this file.</DialogDescription>
+          </DialogHeader>
+          <ShareFileControls projectId={projectId} filePath={file.path} />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
         <DialogContent>

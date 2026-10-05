@@ -30,6 +30,7 @@ export function LiteratureMap({
   projectId,
   filePath,
   onOpen,
+  allowEnrichment = true,
   emptyTitle = "No references to map",
   emptyHint = "Add references or adjust the bibliography search.",
 }: {
@@ -37,6 +38,7 @@ export function LiteratureMap({
   projectId: string;
   filePath: string;
   onOpen: (citationId: string) => void;
+  allowEnrichment?: boolean;
   /** Empty-state overrides so non-bibliography contexts (e.g. the matrix) read naturally. */
   emptyTitle?: string;
   emptyHint?: string;
@@ -75,7 +77,7 @@ export function LiteratureMap({
         <p className="text-xs font-medium">Literature Map</p>
         <p className="text-[10px] text-muted-foreground">{citations.length} Papers · {graph.edges.length} Local Relationships{citationEdges.length ? ` · ${citationEdges.length} Citations` : ""}</p>
       </div>
-      {filePath.toLowerCase().endsWith(".bib") ? <div className="flex items-center gap-1.5">
+      {allowEnrichment && filePath.toLowerCase().endsWith(".bib") ? <div className="flex items-center gap-1.5">
         {enrichment ? <span className={cn("max-w-52 truncate text-[10px]", enrichment.error ? "text-destructive" : "text-muted-foreground")} title={enrichment.error}>{enrichment.error || `${enrichment.resolvedCount}/${enrichment.eligibleCount} DOI Resolved${enrichment.remainingCount ? "" : ""}`}</span> : null}
         <Button size="xs" variant="outline" disabled={enriching} onClick={() => void enrich()}>{enriching ? <Loader2 className="animate-spin" /> : enrichment ? <RefreshCw /> : <Network />}{enriching ? "Finding…" : enrichment ? "Refresh Citations" : "Find Citations"}</Button>
       </div> : null}

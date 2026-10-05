@@ -31,6 +31,7 @@ import {
   type LibraryReferenceFocusDetail,
 } from "@/lib/library-focus";
 import { PROJECT_BIBLIOGRAPHY_PATH } from "@/lib/project-bibliography";
+import { usePublicView } from "@/app/share/[shareId]/_components/public-view-context";
 import { ReferenceSheet, type ReferenceDetail, type ReferenceDraft } from "../reference-sheet";
 import { draftFromBibtexEntry, updateBibtexSourceWithDraft } from "../reference-bibtex";
 import { MatrixTargetDialog, useMatrixAdd } from "../matrix-add";
@@ -92,6 +93,7 @@ const viewLabels: Record<BibliographyView, string> = {
 };
 
 export function BibliographyEditor({ projectId, file, sourceUrl, onSaved }: WorkspaceEditorProps) {
+  const isPublicRoute = Boolean(usePublicView().shareId);
   const text = useTextFile(projectId, file.path, onSaved);
   const [mode, setMode] = useState<BibliographyMode>("preview");
   const [view, setView] = useState<BibliographyView>("cards");
@@ -110,6 +112,7 @@ export function BibliographyEditor({ projectId, file, sourceUrl, onSaved }: Work
   const initialMatrixSyncSignatureRef = useRef<string | undefined>(undefined);
 
   const syncSavedMatrixState = useCallback(async (currentCitations: Citation[]) => {
+    if (isPublicRoute) return;
     try {
       const result = await getCitationMatrixLocations({
         projectId,
@@ -123,7 +126,7 @@ export function BibliographyEditor({ projectId, file, sourceUrl, onSaved }: Work
     } catch {
       // Ignore
     }
-  }, [projectId]);
+  }, [projectId, isPublicRoute]);
 
   useEffect(() => {
     const signature = citations.map(({ id, doi }) => `${id}\u0000${doi ?? ""}`).join("\u0001");
@@ -241,7 +244,7 @@ export function BibliographyEditor({ projectId, file, sourceUrl, onSaved }: Work
     }
   };
 
-  const matrixAdd = useMatrixAdd(projectId);
+  const matrixAdd = useMatrixAdd(projectId, undefined, !isPublicRoute);
   const addCitationToMatrix = (citation: Citation) => {
     const year = citation.year?.match(/\d{4}/)?.[0];
     const entry: MatrixCitationEntry = {
@@ -255,39 +258,39 @@ export function BibliographyEditor({ projectId, file, sourceUrl, onSaved }: Work
     matrixAdd.add({ kind: "citations", entries: [entry] });
   };
 
-  const browser = <CitationBrowser projectId={projectId} filePath={file.path} citations={visible} duplicateIds={duplicateIds} query={query} onQueryChange={setQuery} view={view} onViewChange={setView} compact={mode === "split"} onAdd={file.path === PROJECT_BIBLIOGRAPHY_PATH ? openNewReference : undefined} onOpen={(citation) => { setDetailEditing(false); setDetailCitation(citation); }} />;
+  const browser = <CitationBrowser projectId={projectId} filePath={file.path} citations={visible} duplicateIds={duplicateIds} query={query} onQueryChange={setQuery} view={view} onViewChange={setView} compact={mode === "split"} readOnly={isPublicRoute} onAdd={!isPublicRoute && file.path === PROJECT_BIBLIOGRAPHY_PATH ? openNewReference : undefined} onOpen={(citation) => { setDetailEditing(false); setDetailCitation(citation); }} />;
 
   return <EditorShell path={file.path} sourceUrl={sourceUrl} dirty={text.dirty} status={<span className="text-xs text-muted-foreground mr-2">{extension === "bib" ? "BibTeX" : "RIS"} · {citations.length} References{duplicateIds.size ? ` · ${duplicateIds.size} duplicate keys` : ""}</span>} viewModes={[{
     value: mode,
     onChange: (value) => setMode(value as "preview" | "source" | "split"),
     options: [
       { value: "preview", label: "References preview", icon: Eye },
-      { value: "source", label: "Edit source", icon: Code2 },
+      { value: "source", label: isPublicRoute ? "View source" : "Edit source", icon: Code2 },
       { value: "split", label: "Split source and preview", icon: Columns2 },
     ],
   }]} discard={{ onDiscard: text.discard, disabled: text.saving }} save={{ onClick: () => text.save(), saving: text.saving, disabled: duplicateIds.size > 0 }} review={text.review}>
-    {text.loading ? <EditorLoading name={file.name} size={file.size} /> : text.error ? <EditorError message={text.error} /> : mode === "source" ? <BibliographySource value={text.draft} extension={extension} onChange={text.setDraft} /> : mode === "split" ? <div className="grid h-full min-h-0 grid-cols-1 grid-rows-2 md:grid-cols-2 md:grid-rows-1"><div className="min-h-0 border-r"><BibliographySource value={text.draft} extension={extension} onChange={text.setDraft} /></div>{browser}</div> : browser}
+    {text.loading ? <EditorLoading name={file.name} size={file.size} /> : text.error ? <EditorError message={text.error} /> : mode === "source" ? <BibliographySource value={text.draft} extension={extension} onChange={text.setDraft} readOnly={isPublicRoute} /> : mode === "split" ? <div className="grid h-full min-h-0 grid-cols-1 grid-rows-2 md:grid-cols-2 md:grid-rows-1"><div className="min-h-0 border-r"><BibliographySource value={text.draft} extension={extension} onChange={text.setDraft} readOnly={isPublicRoute} /></div>{browser}</div> : browser}
     <ReferenceSheet
       open={Boolean(detailCitation)}
       onOpenChange={(open) => { if (!open && !text.saving && !deleteTarget) { setDetailCitation(undefined); setDetailEditing(false); } }}
       mode={detailEditing ? "edit" : "preview"}
-      projectId={projectId}
+      projectId={isPublicRoute ? undefined : projectId}
       reference={detailCitation ? citationToReference(detailCitation) : undefined}
       initialDraft={detailCitation?.bibtex ? draftFromBibtexEntry(detailCitation.bibtex) : undefined}
       requireKey
       saving={text.saving}
       duplicateKey={detailCitation ? duplicateIds.has(detailCitation.id) : false}
-      onEdit={extension === "bib" ? () => setDetailEditing(true) : undefined}
+      onEdit={!isPublicRoute && extension === "bib" ? () => setDetailEditing(true) : undefined}
       onCancelEdit={() => setDetailEditing(false)}
       onSave={(draft) => detailCitation ? updateCitation(detailCitation, draft) : Promise.resolve(false)}
-      onDelete={extension === "bib" ? () => {
+      onDelete={!isPublicRoute && extension === "bib" ? () => {
         if (detailCitation) setDeleteTarget(detailCitation);
       } : undefined}
-      onAddToMatrix={detailCitation ? () => addCitationToMatrix(detailCitation) : undefined}
+      onAddToMatrix={!isPublicRoute && detailCitation ? () => addCitationToMatrix(detailCitation) : undefined}
       addingToMatrix={matrixAdd.saving}
       matrixSaved={detailCitation ? savedMatrixKeys.has(detailCitation.id) : false}
     />
-    <ReferenceSheet
+    {!isPublicRoute && <ReferenceSheet
       open={newReferenceOpen}
       onOpenChange={(open) => { if (!open && !newReferenceSaving) setNewReferenceOpen(false); }}
       mode="edit"
@@ -296,7 +299,7 @@ export function BibliographyEditor({ projectId, file, sourceUrl, onSaved }: Work
       saveLabel="Add Reference"
       saving={newReferenceSaving}
       onSave={addReference}
-    />
+    />}
     <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open && !text.saving) setDeleteTarget(undefined); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -327,11 +330,11 @@ export function BibliographyEditor({ projectId, file, sourceUrl, onSaved }: Work
   </EditorShell>;
 }
 
-function BibliographySource({ value, extension, onChange }: { value: string; extension: string; onChange: (value: string) => void }) {
-  return <div className="flex h-full min-h-0 flex-col"><div className="flex h-8 shrink-0 items-center justify-between border-b bg-muted/50 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"><span>{extension === "bib" ? "BibTeX" : "RIS"} source</span><span>{value.split("\n").length} lines</span></div><SourceCodeEditor value={value} extension={extension} onChange={onChange} /></div>;
+function BibliographySource({ value, extension, onChange, readOnly = false }: { value: string; extension: string; onChange: (value: string) => void; readOnly?: boolean }) {
+  return <div className="flex h-full min-h-0 flex-col"><div className="flex h-8 shrink-0 items-center justify-between border-b bg-muted/50 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"><span>{extension === "bib" ? "BibTeX" : "RIS"} source</span><span>{value.split("\n").length} lines</span></div><SourceCodeEditor value={value} extension={extension} onChange={onChange} readOnly={readOnly} /></div>;
 }
 
-function CitationBrowser({ projectId, filePath, citations, duplicateIds, query, onQueryChange, view, onViewChange, onAdd, onOpen, compact = false }: { projectId: string; filePath: string; citations: Citation[]; duplicateIds: Set<string>; query: string; onQueryChange: (value: string) => void; view: BibliographyView; onViewChange: (value: BibliographyView) => void; onAdd?: () => void; onOpen: (citation: Citation) => void; compact?: boolean }) {
+function CitationBrowser({ projectId, filePath, citations, duplicateIds, query, onQueryChange, view, onViewChange, onAdd, onOpen, compact = false, readOnly = false }: { projectId: string; filePath: string; citations: Citation[]; duplicateIds: Set<string>; query: string; onQueryChange: (value: string) => void; view: BibliographyView; onViewChange: (value: BibliographyView) => void; onAdd?: () => void; onOpen: (citation: Citation) => void; compact?: boolean; readOnly?: boolean }) {
   return <div className="flex h-full min-h-0 flex-col bg-muted/20">
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-card p-3">
       <div className="relative min-w-48 flex-1"><Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search title, author, year, or key" className="h-8 pl-8 text-xs selection:bg-primary/20 selection:text-foreground dark:selection:bg-primary/35 dark:selection:text-foreground" /></div>
@@ -345,7 +348,7 @@ function CitationBrowser({ projectId, filePath, citations, duplicateIds, query, 
       <span className="shrink-0 text-xs text-muted-foreground">{citations.length} Shown</span>
     </div>
     <div className="min-h-0 flex-1 overflow-auto p-3">
-      {view === "cards" ? <div className={compact ? "space-y-2" : "grid gap-3 lg:grid-cols-2"}>{citations.map((citation) => <CitationCard key={`${citation.id}:${citation.order}`} citation={citation} duplicate={duplicateIds.has(citation.id)} onOpen={onOpen} />)}</div> : view === "map" ? <div className="h-full min-h-[28rem]"><LiteratureMap projectId={projectId} filePath={filePath} citations={citations} onOpen={(id) => { const citation = citations.find((item) => item.id === id); if (citation) onOpen(citation); }} /></div> : <StyledBibliography citations={citations} style={view} onOpen={onOpen} />}
+      {view === "cards" ? <div className={compact ? "space-y-2" : "grid gap-3 lg:grid-cols-2"}>{citations.map((citation) => <CitationCard key={`${citation.id}:${citation.order}`} citation={citation} duplicate={duplicateIds.has(citation.id)} onOpen={onOpen} />)}</div> : view === "map" ? <div className="h-full min-h-[28rem]"><LiteratureMap projectId={projectId} filePath={filePath} citations={citations} allowEnrichment={!readOnly} onOpen={(id) => { const citation = citations.find((item) => item.id === id); if (citation) onOpen(citation); }} /></div> : <StyledBibliography citations={citations} style={view} onOpen={onOpen} />}
       {citations.length === 0 ? <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-muted-foreground"><BookOpen className="size-7 opacity-50" /><p className="text-sm font-medium">No references found</p><p className="text-xs">Try another search or edit the source.</p></div> : null}
     </div>
   </div>;

@@ -21,6 +21,7 @@ export function AgentMessageList({
   messages,
   status,
   lastEvent,
+  events,
   textStreamStalled,
   isCompacting,
   isInitialTurn,
@@ -32,6 +33,7 @@ export function AgentMessageList({
   readonly messages: readonly EveMessage[];
   readonly status: "ready" | "resuming" | "submitted" | "streaming" | "error";
   readonly lastEvent?: MessageStreamEvent;
+  readonly events: readonly MessageStreamEvent[];
   readonly textStreamStalled: boolean;
   readonly isCompacting: boolean;
   readonly isInitialTurn: boolean;
@@ -46,7 +48,7 @@ export function AgentMessageList({
 }) {
   const isBusy = status === "submitted" || status === "streaming";
   const lastUserMessageIndex = messages.findLastIndex(
-    (message) => message.role === "user",
+    (message) => message.role === "user" && message.metadata?.optimistic !== true,
   );
   // A part can only still be receiving events while its message belongs to
   // the turn eve is actively writing: an assistant message after the last
@@ -94,6 +96,23 @@ export function AgentMessageList({
   const visibleMessages = messages.filter((message) =>
     message.parts.some(isVisibleAgentResponsePart),
   );
+  const turnDurations = new Map<string, number>();
+  const turnStarts = new Map<string, number>();
+  for (const event of events) {
+    if (event.type === "turn.started") {
+      turnStarts.set(event.data.turnId, Date.parse(event.meta.at));
+    } else if (
+      event.type === "turn.completed" ||
+      event.type === "turn.failed" ||
+      event.type === "turn.cancelled"
+    ) {
+      const start = turnStarts.get(event.data.turnId);
+      const end = Date.parse(event.meta.at);
+      if (start !== undefined && Number.isFinite(start) && Number.isFinite(end)) {
+        turnDurations.set(event.data.turnId, Math.max(1, Math.round((end - start) / 1000)));
+      }
+    }
+  }
 
   return (
     <Conversation className="min-h-0 flex-1">
@@ -109,6 +128,7 @@ export function AgentMessageList({
             }
             key={message.id}
             message={message}
+            turnDuration={message.metadata?.turnId ? turnDurations.get(message.metadata.turnId) : undefined}
             toolCallVerbosity={toolCallVerbosity}
             reasoningVerbosity={reasoningVerbosity}
             onInputResponses={onInputResponses}

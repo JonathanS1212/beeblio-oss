@@ -12,6 +12,7 @@ import {
   type ProjectSettings,
 } from "@/lib/project-settings";
 import { getProjectSettings } from "../settings-actions";
+import { usePublicView } from "@/app/share/[shareId]/_components/public-view-context";
 import { ProjectSettingsDialog } from "./project-settings-dialog";
 
 /**
@@ -21,8 +22,10 @@ import { ProjectSettingsDialog } from "./project-settings-dialog";
  */
 export function useProjectSettings(projectId: string) {
   const [settings, setSettings] = useState<ProjectSettings>(parseProjectSettings(undefined));
+  const { shareId } = usePublicView();
 
   useEffect(() => {
+    if (shareId) return;
     let cancelled = false;
     const load = () => {
       getProjectSettings(projectId)
@@ -37,7 +40,7 @@ export function useProjectSettings(projectId: string) {
       cancelled = true;
       window.removeEventListener(COMPLETION_SETTINGS_CHANGED_EVENT, load);
     };
-  }, [projectId]);
+  }, [projectId, shareId]);
 
   return settings;
 }
@@ -56,6 +59,8 @@ export function AutoCompletionButton({
 }) {
   const completion = settings.completion ?? DEFAULT_COMPLETION_SETTINGS;
   const [open, setOpen] = useState(false);
+  const { shareId } = usePublicView();
+  if (shareId) return null;
   return (
     <>
       <Tooltip>

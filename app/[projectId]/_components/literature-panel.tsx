@@ -36,6 +36,7 @@ export function LiteraturePanel({
   projectId,
   initialFiles,
   initialRootTreeChildren,
+  initialAllFiles,
   activeFilePath,
   onOpenFile,
   onOpenFileWithCue,
@@ -45,6 +46,7 @@ export function LiteraturePanel({
   projectId: string;
   initialFiles: FileEntry[];
   initialRootTreeChildren: Record<string, FileEntry[]>;
+  initialAllFiles?: FileEntry[];
   activeFilePath?: string;
   onOpenFile: (file: FileEntry, pinned?: boolean) => void;
   onOpenFileWithCue?: (file: FileEntry, pinned?: boolean) => void;
@@ -121,6 +123,7 @@ export function LiteraturePanel({
             projectId={projectId}
             initialFiles={initialFiles}
             initialRootTreeChildren={initialRootTreeChildren}
+            initialAllFiles={initialAllFiles}
             activeFilePath={activeFilePath}
             onOpenFile={onOpenFile}
           />

@@ -165,6 +165,7 @@ export function ResearchArtifactBrowser({
   projectId,
   initialFiles,
   initialRootTreeChildren,
+  initialAllFiles,
   activeFilePath,
   onOpenFile,
 }: {
@@ -172,15 +173,16 @@ export function ResearchArtifactBrowser({
   projectId: string;
   initialFiles: FileEntry[];
   initialRootTreeChildren: Record<string, FileEntry[]>;
+  initialAllFiles?: FileEntry[];
   activeFilePath?: string;
   onOpenFile: (file: FileEntry, pinned?: boolean) => void;
 }) {
   const initialEntries = useMemo(
-    () => uniqueEntries([
+    () => uniqueEntries(initialAllFiles ?? [
       ...initialFiles,
       ...Object.values(initialRootTreeChildren).flat(),
     ]),
-    [initialFiles, initialRootTreeChildren],
+    [initialAllFiles, initialFiles, initialRootTreeChildren],
   );
   const [entries, setEntries] = useState(initialEntries);
   const [query, setQuery] = useState("");
@@ -216,7 +218,7 @@ export function ResearchArtifactBrowser({
   }, [projectId]);
 
   useEffect(() => {
-    void refresh(initialEntries.length === 0);
+    if (!initialAllFiles) void refresh(initialEntries.length === 0);
     const handleWorkspaceChanged = () => void refresh(false);
     window.addEventListener("beeblio:workspace-changed", handleWorkspaceChanged);
     window.addEventListener("focus", handleWorkspaceChanged);
@@ -224,7 +226,7 @@ export function ResearchArtifactBrowser({
       window.removeEventListener("beeblio:workspace-changed", handleWorkspaceChanged);
       window.removeEventListener("focus", handleWorkspaceChanged);
     };
-  }, [initialEntries.length, refresh]);
+  }, [initialAllFiles, initialEntries.length, refresh]);
 
   // Actions with a known outcome (rename, move, delete, duplicate, upload)
   // broadcast mutations; apply them to the flat listing immediately, with the

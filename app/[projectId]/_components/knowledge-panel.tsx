@@ -35,18 +35,19 @@ function bytes(value: number) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; onOpenFile: (file: FileEntry, pinned?: boolean) => void }) {
+export function KnowledgePanel({ projectId, initialDocuments, initialFiles, onOpenFile }: { projectId: string; initialDocuments?: KnowledgeDocumentDTO[]; initialFiles?: FileEntry[]; onOpenFile: (file: FileEntry, pinned?: boolean) => void }) {
   const cachedSnapshot = knowledgePanelCache.get(projectId);
   const cachedSearch = knowledgeSearchCache.get(projectId);
-  const [documents, setDocuments] = useState<KnowledgeDocumentDTO[]>(() => cachedSnapshot?.documents ?? []);
-  const [files, setFiles] = useState<FileEntry[]>(() => cachedSnapshot?.files ?? []);
+  const [documents, setDocuments] = useState<KnowledgeDocumentDTO[]>(() => cachedSnapshot?.documents ?? initialDocuments ?? []);
+  const [files, setFiles] = useState<FileEntry[]>(() => cachedSnapshot?.files ?? initialFiles ?? []);
   const [query, setQuery] = useState(() => cachedSearch?.query ?? "");
   const [searchResult, setSearchResult] = useState<KnowledgeSearchResult | null>(() => cachedSearch?.result ?? null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string>();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
   const [documentToRemove, setDocumentToRemove] = useState<KnowledgeDocumentDTO | null>(null);
-  const [loading, setLoading] = useState(() => !cachedSnapshot);
+  const [loading, setLoading] = useState(() => !cachedSnapshot && initialDocuments === undefined);
   const [busyPaths, setBusyPaths] = useState<Set<string>>(() => new Set());
   const [isDragging, setIsDragging] = useState(false);
   const searchRequestRef = useRef(0);
@@ -97,6 +98,10 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
   }, [documents, refresh]);
 
   const availableFiles = useMemo(() => files.filter((file) => !file.isDir && acceptsKnowledgeFile(file.name)), [files]);
+  const filteredAvailableFiles = useMemo(() => {
+    const search = pickerQuery.trim().toLocaleLowerCase();
+    return search ? availableFiles.filter((file) => file.name.toLocaleLowerCase().includes(search) || file.path.toLocaleLowerCase().includes(search)) : availableFiles;
+  }, [availableFiles, pickerQuery]);
   const readyCount = useMemo(() => documents.filter((document) => document.status === "ready").length, [documents]);
 
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -276,7 +281,7 @@ export function KnowledgePanel({ projectId, onOpenFile }: { projectId: string; o
         >
           <Plus />Add file</Button></div>}
     </div>
-    <Dialog open={pickerOpen} onOpenChange={setPickerOpen}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Add to Knowledge</DialogTitle><DialogDescription>Select supported workspace files up to 100 MB. Added files process in the background.</DialogDescription></DialogHeader><div className="max-h-80 overflow-y-auto rounded-lg border p-1">{availableFiles.length ? availableFiles.map((file) => { const existing = documents.find((item) => item.filePath === file.path); const busy = busyPaths.has(file.path); return <button key={file.path} disabled={busy || file.size > KNOWLEDGE_MAX_FILE_BYTES} className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-muted disabled:opacity-45" onClick={() => void add(file.path)}><FileText className="size-4 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{file.name}</span><span className="block truncate text-[10px] text-muted-foreground">{file.path} · {bytes(file.size)}</span></span>{busy ? <Loader2 className="size-4 animate-spin" /> : existing ? <span className="text-[10px] text-muted-foreground">{existing.status === "ready" ? "Added" : existing.status}</span> : <Plus className="size-4" />}</button>; }) : <p className="p-6 text-center text-xs text-muted-foreground">No supported workspace files are available.</p>}</div><p className="text-[11px] text-muted-foreground">You can also drag workspace files here, or drop files from your computer to upload them into References and add them.</p><DialogFooter><Button variant="outline" onClick={() => setPickerOpen(false)}>Done</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={pickerOpen} onOpenChange={(open) => { setPickerOpen(open); if (!open) setPickerQuery(""); }}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Add to Knowledge</DialogTitle><DialogDescription>Select supported workspace files up to 100 MB. Added files process in the background.</DialogDescription></DialogHeader><div className="relative"><Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input type="search" value={pickerQuery} onChange={(event) => setPickerQuery(event.target.value)} placeholder="Search workspace files…" aria-label="Search workspace files" className="pl-8" /></div><div className="max-h-80 overflow-y-auto rounded-lg border p-1">{filteredAvailableFiles.length ? filteredAvailableFiles.map((file) => { const existing = documents.find((item) => item.filePath === file.path); const busy = busyPaths.has(file.path); return <button key={file.path} disabled={busy || file.size > KNOWLEDGE_MAX_FILE_BYTES} className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-muted disabled:opacity-45" onClick={() => void add(file.path)}><FileText className="size-4 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{file.name}</span><span className="block truncate text-[10px] text-muted-foreground">{file.path} · {bytes(file.size)}</span></span>{busy ? <Loader2 className="size-4 animate-spin" /> : existing ? <span className="text-[10px] text-muted-foreground">{existing.status === "ready" ? "Added" : existing.status}</span> : <Plus className="size-4" />}</button>; }) : <p className="p-6 text-center text-xs text-muted-foreground">{availableFiles.length ? "No files match your search." : "No supported workspace files are available."}</p>}</div><p className="text-[11px] text-muted-foreground">You can also drag workspace files here, or drop files from your computer to upload them into References and add them.</p><DialogFooter><Button variant="outline" onClick={() => setPickerOpen(false)}>Done</Button></DialogFooter></DialogContent></Dialog>
     <AlertDialog open={documentToRemove !== null} onOpenChange={(open) => { if (!open && !busyPaths.has(documentToRemove?.filePath ?? "")) setDocumentToRemove(null); }}>
       <AlertDialogContent>
         <AlertDialogHeader>

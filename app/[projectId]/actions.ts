@@ -1,12 +1,13 @@
 "use server";
 
 import { and, desc, eq, isNull } from "drizzle-orm";
+import { cache } from "react";
 
 import { db } from "@/db";
 import { agentSessions, projects } from "@/db/schema";
 import { requireUser } from "@/lib/auth/session";
 
-export async function getOwnedProject(user: { id: string }, projectSlug: string) {
+export const getOwnedProject = cache(async (user: { id: string }, projectSlug: string) => {
   return db.query.projects.findFirst({
     where: and(
       eq(projects.slug, projectSlug),
@@ -14,7 +15,7 @@ export async function getOwnedProject(user: { id: string }, projectSlug: string)
       isNull(projects.deletedAt),
     ),
   });
-}
+});
 
 import { revalidatePath } from "next/cache";
 

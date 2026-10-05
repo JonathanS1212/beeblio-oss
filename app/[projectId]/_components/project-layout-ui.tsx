@@ -9,11 +9,14 @@ import {
   useCallback,
   type DragEvent,
   type KeyboardEvent,
+  type MouseEvent,
   type PointerEvent,
   type ReactNode,
   type SyntheticEvent,
 } from "react";
 import {
+  ClipboardList,
+  Code2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +29,7 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Table2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +37,8 @@ import { toast } from "sonner";
 import { Brand } from "@/app/_components/brand";
 import { ConversationLoading } from "@/app/_components/conversation-loading";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -58,10 +64,12 @@ import {
   type UntitledDraftKind,
 } from "@/lib/untitled-draft";
 import { cn } from "@/lib/utils";
+import type { KnowledgeDocumentDTO } from "@/lib/knowledge";
 import {
   ADD_FILE_TO_CHAT_EVENT,
   ADD_SELECTION_TO_CHAT_EVENT,
   AGENT_PANEL_OPENED_EVENT,
+  NEW_CONVERSATION_EVENT,
   ASK_AGENT_EVENT,
   OPEN_WORKSPACE_FILE_EVENT,
   OPEN_WORKSPACE_FOLDER_EVENT,
@@ -83,9 +91,12 @@ import type { SkillSummary } from "../skill-actions";
 import { uploadWorkspaceFile } from "@/lib/workspace-upload";
 import { FileNameInput, splitFileName } from "./file-name-input";
 import { FileExplorer } from "./file-explorer";
+import { announceFormCreated, createFormInFormsFolder, FORMS_DIRECTORY } from "./form-creation";
 import { KnowledgePanel } from "./knowledge-panel";
 import { FileViewer } from "./file-viewer";
 import { writeCachedText } from "./editors/text-content-cache";
+import { createMatrixFile } from "../matrix-actions";
+import { ANALYSIS_DIRECTORY } from "@/lib/research-workspace";
 import { clearCachedBibliography, writeCachedBibliography } from "./editors/bibliography-cache";
 import { clearTextDraft, moveTextDraftKey, readTextDraft } from "./editors/text-draft-cache";
 import { LiteraturePanel } from "./literature-panel";
@@ -114,6 +125,8 @@ interface ProjectLayoutUIProps {
   initialActivity?: Activity;
   initialFiles: FileEntry[];
   initialRootTreeChildren: Record<string, FileEntry[]>;
+  initialAllFiles?: FileEntry[];
+  initialKnowledgeDocuments?: KnowledgeDocumentDTO[];
   /** User-scoped skill list (server-resolved) so the Skills panel opens populated. */
   initialSkills?: SkillSummary[];
   initialSessions: Array<{ id: string; title: string | null }>;
@@ -139,12 +152,33 @@ function entryForPath(
   return known ?? { name: fallbackName, path, isDir: false, size: 0 };
 }
 
+const customFileTypes = [
+  { extension: "txt", label: "Plain text (.txt)", content: "" },
+  { extension: "md", label: "Markdown (.md)", content: "" },
+  { extension: "csv", label: "CSV table (.csv)", content: "" },
+  { extension: "json", label: "JSON (.json)", content: "{}\n" },
+  { extension: "ipynb", label: "Jupyter notebook (.ipynb)", content: '{"cells":[],"metadata":{},"nbformat":4,"nbformat_minor":5}\n' },
+  { extension: "tex", label: "LaTeX (.tex)", content: "\\documentclass{article}\n\\begin{document}\n\n\\end{document}\n" },
+  { extension: "bib", label: "BibTeX (.bib)", content: "" },
+  { extension: "html", label: "HTML (.html)", content: '<!doctype html>\n<html lang="en">\n<head><meta charset="utf-8"><title>Untitled</title></head>\n<body>\n</body>\n</html>\n' },
+  { extension: "js", label: "JavaScript (.js)", content: "" },
+  { extension: "ts", label: "TypeScript (.ts)", content: "" },
+  { extension: "py", label: "Python (.py)", content: "" },
+  { extension: "css", label: "CSS (.css)", content: "" },
+  { extension: "yaml", label: "YAML (.yaml)", content: "" },
+  { extension: "sql", label: "SQL (.sql)", content: "" },
+] as const;
+
+type CustomFileExtension = (typeof customFileTypes)[number]["extension"];
+
 export function ProjectLayoutUI({
   projectId,
   projectName,
   initialActivity,
   initialFiles,
   initialRootTreeChildren,
+  initialAllFiles,
+  initialKnowledgeDocuments,
   initialSkills,
   initialSessions,
   defaultFilePath,
@@ -190,6 +224,7 @@ export function ProjectLayoutUI({
   const [openFiles, setOpenFiles] = useState<FileEntry[]>([]);
   const [activeFilePath, setActiveFilePath] = useState<string>();
   const [previewFilePath, setPreviewFilePath] = useState<string>();
+  const [tabsRestored, setTabsRestored] = useState(false);
   // The workspace-mutation listener runs outside React's update cycle; these
   // refs mirror the tab state so it reads fresh values without a stale
   // closure, and never performs the URL rewrite inside a state updater.
@@ -232,6 +267,15 @@ export function ProjectLayoutUI({
   const [saveAsName, setSaveAsName] = useState("");
   const [saveAsError, setSaveAsError] = useState<string>();
   const [saveAsSaving, setSaveAsSaving] = useState(false);
+  const [newArtifactKind, setNewArtifactKind] = useState<"form" | "matrix">();
+  const [newArtifactName, setNewArtifactName] = useState("");
+  const [newArtifactError, setNewArtifactError] = useState<string>();
+  const [newArtifactPending, setNewArtifactPending] = useState(false);
+  const [newCustomOpen, setNewCustomOpen] = useState(false);
+  const [newCustomName, setNewCustomName] = useState("");
+  const [newCustomExtension, setNewCustomExtension] = useState<CustomFileExtension>("txt");
+  const [newCustomError, setNewCustomError] = useState<string>();
+  const [newCustomPending, setNewCustomPending] = useState(false);
 
   useEffect(() => {
     const openQuickOpen = (event: globalThis.KeyboardEvent) => {
@@ -409,29 +453,56 @@ export function ProjectLayoutUI({
   }, [projectId]);
 
   useEffect(() => {
-    const filePath =
-      new URLSearchParams(window.location.search).get("file") || defaultFilePath;
-    if (!filePath || isUntitledDraftPath(filePath)) return;
-    // The server embedded the default file's text in the page; writing it
-    // into the cache before the tab opens makes the editor's first render
-    // synchronous (it still SWR-revalidates per the cache's staleness rules).
-    if (filePath === defaultFilePath && defaultFileContent !== undefined) {
-      writeCachedText(filePath, defaultFileContent);
+    const filePath = new URLSearchParams(window.location.search).get("file") || undefined;
+    const storageKey = `beeblio:${projectId}:open-files`;
+    let savedPaths: string[] = [];
+    let savedActivePath: string | undefined;
+    let hasSavedTabs = false;
+    try {
+      const parsed: unknown = JSON.parse(window.sessionStorage.getItem(storageKey) ?? "null");
+      if (parsed && typeof parsed === "object" && "paths" in parsed && Array.isArray(parsed.paths)) {
+        hasSavedTabs = true;
+        savedPaths = [...new Set(parsed.paths.filter((path): path is string => typeof path === "string" && path.length > 0))];
+        if ("activePath" in parsed && typeof parsed.activePath === "string") savedActivePath = parsed.activePath;
+      }
+    } catch {
+      // Storage can be disabled, or contain data from an older version.
     }
-    const file = entryForPath(
-      filePath,
-      filePath.split("/").at(-1) || filePath,
+    const activePath = filePath && !isUntitledDraftPath(filePath)
+      ? filePath
+      : savedActivePath ?? savedPaths.at(-1) ?? (hasSavedTabs ? undefined : defaultFilePath);
+    const paths = [...savedPaths];
+    if (activePath && !paths.includes(activePath)) paths.push(activePath);
+    if (activePath && activePath === defaultFilePath && defaultFileContent !== undefined) {
+      writeCachedText(activePath, defaultFileContent);
+    }
+    const files = paths.map((path) => entryForPath(
+      path,
+      isUntitledDraftPath(path) ? untitledDraftTabLabel(path) : path.split("/").at(-1) || path,
       initialFiles,
       initialRootTreeChildren,
-    );
-    setOpenFiles([file]);
-    setActiveFilePath(filePath);
-    // The URL already carries an explicit ?file= param; mirror the default
-    // open into it so reloads and shared links land on the same file.
-    setFileInUrl(filePath);
+    ));
+    openFilesRef.current = files;
+    activeFilePathRef.current = activePath;
+    setOpenFiles(files);
+    setActiveFilePath(activePath);
+    setTabsRestored(true);
+    if (activePath) setFileInUrl(activePath);
   // Seed the initial server-selected tab once; later file changes use the tab actions.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!tabsRestored) return;
+    try {
+      window.sessionStorage.setItem(
+        `beeblio:${projectId}:open-files`,
+        JSON.stringify({ paths: openFiles.map((file) => file.path), activePath: activeFilePath }),
+      );
+    } catch {
+      // Browsers with blocked or full storage still keep tabs for this visit.
+    }
+  }, [projectId, openFiles, activeFilePath, tabsRestored]);
 
   const setFileInUrl = (filePath?: string) => {
     const url = new URL(window.location.href);
@@ -630,6 +701,73 @@ export function ProjectLayoutUI({
 
   const previewFile = (file: FileEntry, pinned = false) => openFile(file, pinned);
 
+  const createArtifact = async () => {
+    const name = newArtifactName.trim();
+    if (!newArtifactKind || !name || newArtifactPending) return;
+    setNewArtifactPending(true);
+    setNewArtifactError(undefined);
+    try {
+      let file: FileEntry;
+      if (newArtifactKind === "form") {
+        file = await createFormInFormsFolder(projectId, name);
+        announceFormCreated();
+      } else {
+        const result = await createMatrixFile({ projectId, name });
+        if (!result.success) {
+          setNewArtifactError(result.error);
+          return;
+        }
+        file = {
+          name: result.matrixPath.split("/").at(-1) || result.matrixPath,
+          path: result.matrixPath,
+          isDir: false,
+          size: 0,
+        };
+        dispatchWorkspaceMutation({ kind: "create", entry: file });
+        window.dispatchEvent(new CustomEvent("beeblio:workspace-changed"));
+      }
+      setNewArtifactKind(undefined);
+      setNewArtifactName("");
+      openFile(file);
+    } catch (error) {
+      setNewArtifactError(error instanceof Error ? error.message : "Could not create the file.");
+    } finally {
+      setNewArtifactPending(false);
+    }
+  };
+
+  const createCustomFile = async () => {
+    if (newCustomPending) return;
+    const raw = newCustomName.trim();
+    const suffix = `.${newCustomExtension}`;
+    const stem = raw.toLowerCase().endsWith(suffix) ? raw.slice(0, -suffix.length).trim() : raw;
+    if (!stem || stem === "." || stem === ".." || /[<>:"/\\|?*\u0000-\u001f]/.test(stem)) {
+      setNewCustomError("Enter a valid file name without a folder path.");
+      return;
+    }
+    setNewCustomPending(true);
+    setNewCustomError(undefined);
+    const type = customFileTypes.find((item) => item.extension === newCustomExtension)!;
+    const file = new File([type.content], `${stem}${suffix}`, { type: "text/plain" });
+    try {
+      const result = await uploadWorkspaceFile(projectId, "", file);
+      if (!result.success) {
+        setNewCustomError(result.error);
+        return;
+      }
+      dispatchWorkspaceMutation({ kind: "create", entry: result.file });
+      window.dispatchEvent(new CustomEvent("beeblio:workspace-changed"));
+      window.dispatchEvent(new Event("beeblio:storage-changed"));
+      setNewCustomOpen(false);
+      setNewCustomName("");
+      openFile(result.file);
+    } catch (error) {
+      setNewCustomError(error instanceof Error ? error.message : "Could not create the file.");
+    } finally {
+      setNewCustomPending(false);
+    }
+  };
+
   // Instant first paint for Quick Open: the server-rendered listing stands in
   // until the dialog's own refresh completes.
   const quickOpenSeedFiles = useMemo(
@@ -737,6 +875,7 @@ export function ProjectLayoutUI({
   const activeFile = openFiles.find((file) => file.path === activeFilePath);
   const workspaceContext = useMemo(
     () => ({
+      initialFiles: initialAllFiles,
       activeFile,
       selection,
       unsavedFile,
@@ -752,7 +891,7 @@ export function ProjectLayoutUI({
       getCurrentContent,
       saveUntitledDraft,
     }),
-    [activeFile, discardUnsavedFile, getCurrentContent, getUnsavedContent, pinFile, registerEditor, registerSelectionProvider, saveUntitledDraft, saveUnsavedFile, selection, unregisterEditor, unregisterSelectionProvider, unsavedFile],
+    [activeFile, initialAllFiles, discardUnsavedFile, getCurrentContent, getUnsavedContent, pinFile, registerEditor, registerSelectionProvider, saveUntitledDraft, saveUnsavedFile, selection, unregisterEditor, unregisterSelectionProvider, unsavedFile],
   );
 
   // One capture pipeline for every selection surface: a rich editor's document
@@ -793,6 +932,18 @@ export function ProjectLayoutUI({
     if (text) setSelection({ filePath: activeFile.path, text: text.slice(0, SELECTION_MAX_CHARS), source: "rendered" });
   };
   const newConversationHref = `/${projectId}${activeFilePath && !isUntitledDraftPath(activeFilePath) ? `?file=${encodeURIComponent(activeFilePath)}` : ""}`;
+  const openNewConversation = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    setConversationHistoryOpen(false);
+    setAgentOpen(true);
+    setReviewOpen(false);
+    if (window.location.pathname !== `/${projectId}`) {
+      setPendingConversationPath(undefined);
+      window.dispatchEvent(new CustomEvent(NEW_CONVERSATION_EVENT));
+      window.history.pushState(null, "", newConversationHref);
+    }
+  };
 
   // When an action opens a file that is already open, point the user at the
   // existing tab instead of appearing to do nothing.
@@ -1083,6 +1234,8 @@ export function ProjectLayoutUI({
               projectName={projectName}
               initialFiles={initialFiles}
               initialRootTreeChildren={initialRootTreeChildren}
+              initialAllFiles={initialAllFiles}
+              initialKnowledgeDocuments={initialKnowledgeDocuments}
               initialSkills={initialSkills}
               activeFilePath={activeFilePath}
               onOpenFile={previewFile}
@@ -1178,6 +1331,15 @@ export function ProjectLayoutUI({
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => createUntitledDraft("excalidraw")}>
                     <PenTool />Drawing
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setNewArtifactKind("form")}>
+                    <ClipboardList />Survey Form
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setNewArtifactKind("matrix")}>
+                    <Table2 />Literature Matrix
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setNewCustomOpen(true)}>
+                    <Code2 />Custom
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -1348,6 +1510,7 @@ export function ProjectLayoutUI({
               onQueryChange={setConversationQuery}
               onSelectConversation={openConversation}
               onDeleteConversation={handleConversationDeleted}
+              onNewConversation={openNewConversation}
             />
           ) : null}
           <div className="min-h-0 flex-1">
@@ -1361,6 +1524,111 @@ export function ProjectLayoutUI({
           </div>
         </aside>
       </div>
+      <Dialog
+        open={newCustomOpen}
+        onOpenChange={(open) => {
+          if (!open && newCustomPending) return;
+          setNewCustomOpen(open);
+          if (!open) {
+            setNewCustomName("");
+            setNewCustomError(undefined);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Custom File</DialogTitle>
+            <DialogDescription>Choose a text-editable file type. The file will be created in the project root.</DialogDescription>
+          </DialogHeader>
+          <form className="flex flex-col gap-3" onSubmit={(event) => {
+            event.preventDefault();
+            void createCustomFile();
+          }}>
+            <FileNameInput
+              value={newCustomName}
+              onChange={(value) => {
+                setNewCustomName(value);
+                setNewCustomError(undefined);
+              }}
+              extension={`.${newCustomExtension}`}
+              ariaLabel="File name"
+              placeholder="File name"
+              autoFocus
+              disabled={newCustomPending}
+            />
+            <Select value={newCustomExtension} onValueChange={(value) => setNewCustomExtension(value as CustomFileExtension)} disabled={newCustomPending}>
+              <SelectTrigger className="w-full" aria-label="File type"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {customFileTypes.map((type) => <SelectItem key={type.extension} value={type.extension}>{type.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {newCustomError ? <p className="text-sm text-destructive">{newCustomError}</p> : null}
+            <DialogFooter>
+              <Button type="button" variant="ghost" disabled={newCustomPending} onClick={() => {
+                setNewCustomOpen(false);
+                setNewCustomName("");
+                setNewCustomError(undefined);
+              }}>Cancel</Button>
+              <Button type="submit" disabled={newCustomPending || !newCustomName.trim()}>
+                {newCustomPending ? <Loader2 className="animate-spin" /> : null}
+                Create File
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={newArtifactKind !== undefined}
+        onOpenChange={(open) => {
+          if (open || newArtifactPending) return;
+          setNewArtifactKind(undefined);
+          setNewArtifactName("");
+          setNewArtifactError(undefined);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New {newArtifactKind === "form" ? "Survey Form" : "Literature Matrix"}</DialogTitle>
+            <DialogDescription>
+              {newArtifactKind === "form"
+                ? `Create a form in ${FORMS_DIRECTORY}.`
+                : `Create a comparison table in ${ANALYSIS_DIRECTORY}.`}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void createArtifact();
+            }}
+          >
+            <Input
+              value={newArtifactName}
+              onChange={(event) => setNewArtifactName(event.target.value)}
+              placeholder={newArtifactKind === "form" ? "e.g. Course Evaluation" : "e.g. Systematic review screening"}
+              aria-label={newArtifactKind === "form" ? "Form name" : "Matrix name"}
+              autoFocus
+              disabled={newArtifactPending}
+            />
+            {newArtifactError ? <p className="text-sm text-destructive">{newArtifactError}</p> : null}
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => {
+                setNewArtifactKind(undefined);
+                setNewArtifactName("");
+                setNewArtifactError(undefined);
+              }} disabled={newArtifactPending}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={newArtifactPending || !newArtifactName.trim()}>
+                {newArtifactPending ? <Loader2 className="animate-spin" /> : null}
+                Create {newArtifactKind === "form" ? "Form" : "Matrix"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={saveAs !== undefined}
         onOpenChange={(open) => {
@@ -1483,6 +1751,8 @@ function NavigationContent({
   projectName,
   initialFiles,
   initialRootTreeChildren,
+  initialAllFiles,
+  initialKnowledgeDocuments,
   initialSkills,
   activeFilePath,
   onOpenFile,
@@ -1497,6 +1767,8 @@ function NavigationContent({
   projectName: string;
   initialFiles: FileEntry[];
   initialRootTreeChildren: Record<string, FileEntry[]>;
+  initialAllFiles?: FileEntry[];
+  initialKnowledgeDocuments?: KnowledgeDocumentDTO[];
   initialSkills?: SkillSummary[];
   activeFilePath?: string;
   onOpenFile: (file: FileEntry, pinned?: boolean) => void;
@@ -1516,6 +1788,7 @@ function NavigationContent({
         projectId={projectId}
         initialFiles={initialFiles}
         initialRootTreeChildren={initialRootTreeChildren}
+        initialAllFiles={initialAllFiles}
         activeFilePath={activeFilePath}
         onOpenFile={onOpenFile}
         onOpenFileWithCue={onOpenFileWithCue}
@@ -1526,7 +1799,7 @@ function NavigationContent({
   }
 
   if (activity === "knowledge") {
-    return <KnowledgePanel projectId={projectId} onOpenFile={onOpenFile} />;
+    return <KnowledgePanel projectId={projectId} initialDocuments={initialKnowledgeDocuments} initialFiles={initialAllFiles} onOpenFile={onOpenFile} />;
   }
 
   if (activity === "skills") {
@@ -1540,6 +1813,7 @@ function NavigationContent({
         projectId={projectId}
         initialFiles={initialFiles}
         initialRootTreeChildren={initialRootTreeChildren}
+        initialAllFiles={initialAllFiles}
         activeFilePath={activeFilePath}
         onOpenFile={onOpenFile}
       />
