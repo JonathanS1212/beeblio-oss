@@ -11,11 +11,10 @@ import { SharedFileViewer } from "./_components/shared-file-viewer";
 
 export default async function SharedFilePage({ params }: { params: Promise<{ shareId: string }> }) {
   const { shareId } = await params;
-  const user = await getUser();
-
-  const fileRecord = await db.query.publicFiles.findFirst({
-    where: eq(publicFiles.id, shareId),
-  });
+  const [user, fileRecord] = await Promise.all([
+    getUser(),
+    db.query.publicFiles.findFirst({ where: eq(publicFiles.id, shareId) }),
+  ]);
 
   if (!fileRecord) notFound();
 

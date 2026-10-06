@@ -11,7 +11,7 @@ import { integerEnv } from "@/lib/env-config";
 export async function getProjects() {
   const user = await requireUser();
   return db
-    .select()
+    .select({ id: projects.id, name: projects.name, slug: projects.slug })
     .from(projects)
     .where(and(eq(projects.userId, user.id), isNull(projects.deletedAt)))
     .orderBy(desc(projects.updatedAt));
@@ -22,7 +22,13 @@ export async function getWorkspaceDashboardData() {
 
   const [ownedProjects, sessionCounts, recentSessions] = await Promise.all([
     db
-      .select()
+      .select({
+        id: projects.id,
+        slug: projects.slug,
+        name: projects.name,
+        description: projects.description,
+        updatedAt: projects.updatedAt,
+      })
       .from(projects)
       .where(and(eq(projects.userId, user.id), isNull(projects.deletedAt)))
       .orderBy(desc(projects.updatedAt)),

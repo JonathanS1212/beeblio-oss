@@ -101,7 +101,7 @@ import { ANALYSIS_DIRECTORY } from "@/lib/research-workspace";
 import { clearCachedBibliography, writeCachedBibliography } from "./editors/bibliography-cache";
 import { clearTextDraft, moveTextDraftKey, readTextDraft } from "./editors/text-draft-cache";
 import { LiteraturePanel } from "./literature-panel";
-import { ProjectSwitcher } from "./project-switcher";
+import { ProjectSwitcher, type SwitcherProject } from "./project-switcher";
 import { QuickOpenDialog } from "./quick-open-dialog";
 import {
   ResearchArtifactBrowser,
@@ -128,6 +128,7 @@ interface ProjectLayoutUIProps {
   initialRootTreeChildren: Record<string, FileEntry[]>;
   initialAllFiles?: FileEntry[];
   initialKnowledgeDocuments?: KnowledgeDocumentDTO[];
+  initialSwitcherProjects?: SwitcherProject[];
   /** User-scoped skill list (server-resolved) so the Skills panel opens populated. */
   initialSkills?: SkillSummary[];
   initialSessions: Array<{ id: string; title: string | null }>;
@@ -180,6 +181,7 @@ export function ProjectLayoutUI({
   initialRootTreeChildren,
   initialAllFiles,
   initialKnowledgeDocuments,
+  initialSwitcherProjects,
   initialSkills,
   initialSessions,
   defaultFilePath,
@@ -1219,7 +1221,7 @@ export function ProjectLayoutUI({
           )}
         >
           <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-            <ProjectSwitcher projectId={projectId} projectName={projectName} />
+            <ProjectSwitcher projectId={projectId} projectName={projectName} initialProjects={initialSwitcherProjects} />
             <Button
               size="icon-sm"
               variant="ghost"

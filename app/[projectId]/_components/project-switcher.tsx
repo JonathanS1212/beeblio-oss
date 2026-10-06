@@ -13,23 +13,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getProjects } from "@/app/actions";
 
-type SwitcherProject = { id: string; name: string; slug: string };
+export type SwitcherProject = { id: string; name: string; slug: string };
 
 /**
  * Navigation header's project name as a workspace switcher: opens the user's
  * recent projects and navigates straight to one. The list is fetched on every
- * open (the source of truth is mutable — projects are created, renamed, and
- * deleted from the dashboard) while the previous list stays rendered, so only
- * the first open shows a loader.
+ * open while keeping the initial list from the project layout visible.
  */
 export function ProjectSwitcher({
   projectId,
   projectName,
+  initialProjects,
 }: {
   projectId: string;
   projectName: string;
+  initialProjects?: SwitcherProject[];
 }) {
-  const [projects, setProjects] = useState<SwitcherProject[]>();
+  const [projects, setProjects] = useState<SwitcherProject[] | undefined>(initialProjects);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -38,7 +38,7 @@ export function ProjectSwitcher({
     setFailed(false);
     try {
       const owned = await getProjects();
-      setProjects(owned.map(({ id, name, slug }) => ({ id, name, slug })));
+      setProjects(owned);
     } catch {
       setFailed(true);
     } finally {

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { UserMenu } from "@/app/_components/user-menu";
+import { getProjects } from "@/app/actions";
 import { requireUser } from "@/lib/auth/session";
 import {
   parseProjectSettings,
@@ -60,7 +61,7 @@ export default async function ProjectLayout({
 }) {
   const { projectId } = await params;
   const user = await requireUser();
-  const [workspaceListing, project, initialSkills, initialKnowledgeDocuments] =
+  const [workspaceListing, project, initialSkills, initialKnowledgeDocuments, switcherProjects] =
     await Promise.all([
       getInitialWorkspaceListing(projectId),
       getOwnedProject(user, projectId),
@@ -68,6 +69,7 @@ export default async function ProjectLayout({
       // panel's own fetch instead of failing the whole layout.
       listAgentSkills(user.id).catch(() => undefined),
       listKnowledge(user.id, projectId).catch(() => undefined),
+      getProjects().catch(() => undefined),
     ]);
   const initialRootTree = workspaceListing.rootTree;
   if (!project) {
@@ -107,6 +109,7 @@ export default async function ProjectLayout({
       initialRootTreeChildren={initialRootTree.children}
       initialAllFiles={workspaceListing.allFiles}
       initialKnowledgeDocuments={initialKnowledgeDocuments}
+      initialSwitcherProjects={switcherProjects}
       initialSkills={initialSkills}
       initialSessions={[]}
       defaultFilePath={defaultFilePath}
